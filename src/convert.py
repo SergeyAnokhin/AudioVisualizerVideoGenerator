@@ -20,6 +20,8 @@ def process_folders(base_folder, num_workers=1):
     num_cores = num_workers if num_workers else os.cpu_count()
     print("Using CPU cores: ", num_cores)
 
+    # convertor.create_video_from_folder(folder, gif_file, None)
+
     # Determine parts based on the number of cores
     parts = list(range(num_cores))  # Creating a list of parts from 0 to num_cores - 1
 

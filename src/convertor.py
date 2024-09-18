@@ -119,7 +119,7 @@ def add_gif(gif_file, audio_duration, slideshow):
         final_video = slideshow
     return final_video
 
-def create_slideshow_with_fade(images, audio_duration, image_duration=2, fade_duration=0.5):
+def create_slideshow_with_fade(images, audio_duration, image_duration=2, fade_duration=0.1):
     image_clips = []
     
     # Create individual image clips with fade in and fade out
@@ -177,3 +177,25 @@ def has_transparency(gif_path):
     if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
         return True
     return False
+
+
+# # Assuming 'final_video' is your video clip and 'audio_duration' is the duration of the audio
+# text = "ВОТ БЫ БЫЛА"  # The text you want to add
+
+# # Add text overlay to the video
+# final_video_with_text = add_text_overlay(final_video, text, duration=audio_duration)
+
+# # Save the final video with text
+# final_video_with_text.write_videofile("output_with_text.mp4", fps=24)
+
+def add_text_overlay(video_clip, text, duration, fontsize=50, color='white', transparency=0.6):
+    # Create the text clip
+    text_clip = (TextClip(text, fontsize=fontsize, color=color, font='Arial-Bold')
+                 .set_duration(duration)
+                 .set_position(('center', 'bottom'))  # Position at the center bottom of the video
+                 .set_opacity(transparency))  # Set transparency
+
+    # Overlay the text on the video
+    video_with_text = CompositeVideoClip([video_clip, text_clip])
+
+    return video_with_text

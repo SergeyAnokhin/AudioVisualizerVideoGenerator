@@ -24,55 +24,30 @@ def create_video_from_folder(folder, gif_file=None):
 
     # Длительность каждого изображения (в секундах)
     image_duration = 10  # Измените на желаемую длительность
+    
+    # Создаем слайд-шоу с повторением и затемнением
+    print("⏩Create looping slideshow with fade transition")
+    slideshow = create_slideshow_with_fade(images, audio_duration=audio_duration, 
+                                           image_duration=image_duration, fade_duration=0.5)
 
-    # Создаем список клипов из изображений
-    image_clips = [] 
-    for img in images:
-        clip = ImageClip(img).set_duration(image_duration)
-        print("Load image: 🖼", img)
-        image_clips.append(clip)
-
-    # Если нет изображений, используем черный фон
-    if not image_clips:
-        image_clips = [ColorClip(size=(1280, 720), color=(0, 0, 0)).set_duration(image_duration)]
-
-    # Объединяем клипы в одно слайд-шоу
-    slideshow = concatenate_videoclips(image_clips, method="compose")
-
-    # Зацикливаем слайд-шоу на всю длительность аудио
-    slideshow = slideshow.loop(duration=audio_duration)
 
     inspect_clip("slideshow", slideshow)
 
     # Проверяем наличие GIF-файла и накладываем его на видео
-    if gif_file and os.path.isfile(gif_file):
-        print("✔Gif file found")
-
-        has_mask = False # has_transparency(gif_file)
-        # Загружаем GIF и зацикливаем на всю длительность аудио
-        gif_clip = (VideoFileClip(gif_file, has_mask)
-                    .loop(duration=audio_duration)
-                    # .resize(0.5)  # Масштабирование (0.5 = 50% от исходного размера)
-                    .set_position(("left", "bottom")))  # Позиция (можно изменить на нужную)
-
-        # Делаем фон GIF прозрачным (удаляем определенный цвет)
-        gif_clip = gif_clip.fx(vfx.mask_color, color=[0, 0, 0], thr=100, s=5)
-
-        inspect_clip("gif_clip", gif_clip)
-
-        # Накладываем GIF поверх слайд-шоу
-        final_video = CompositeVideoClip([slideshow, gif_clip])
-    else:
-        final_video = slideshow
+    final_video = add_gif(gif_file, audio_duration, slideshow)
 
     # Добавляем аудио к видео
     final_video = final_video.set_audio(audio)
 
     # Создаем эквалайзерный клип
     print("⏩Create equalizer visualization")
-    equalizer_clip = equalizers.create_equalizer_clip(audio_file, duration=audio_duration, 
-                        size=final_video.size, colormap=cv2.COLORMAP_AUTUMN,
-                        equalizer_width_percent=30, max_bar_height_percent=30)
+    # equalizer_clip = equalizers.create_equalizer_clip_bars_upper(audio_file, duration=audio_duration, 
+    #                     size=final_video.size, colormap=cv2.COLORMAP_AUTUMN,
+    #                     equalizer_width_percent=30, max_bar_height_percent=30)
+    equalizer_clip = equalizers.create_equalizer_clip(audio_file, duration=audio_duration,
+                        size=final_video.size, colormap=cv2.COLORMAP_AUTUMN)
+
+    
     equalizer_clip = equalizer_clip.set_opacity(0.2)  # Опционально: установить прозрачность
 
     inspect_clip("final_video", final_video)
@@ -88,7 +63,7 @@ def create_video_from_folder(folder, gif_file=None):
     if is_test:
         print("Mode: 🧪Test")
         final_video = final_video.resize(0.5)
-        final_video = final_video.subclip(10, 70) # Start at 0 seconds and end at 10 seconds
+        final_video = final_video.subclip(25, 35) # Start at 0 seconds and end at 10 seconds
         fps = 6
         preset = 'ultrafast' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
@@ -113,6 +88,45 @@ def create_video_from_folder(folder, gif_file=None):
 
 
 
+def add_gif(gif_file, audio_duration, slideshow):
+    if gif_file and os.path.isfile(gif_file):
+        print("✔Gif file found")
+
+        has_mask = False # has_transparency(gif_file)
+        # Загружаем GIF и зацикливаем на всю длительность аудио
+        gif_clip = (VideoFileClip(gif_file, has_mask)
+                    .loop(duration=audio_duration)
+                    # .resize(0.5)  # Масштабирование (0.5 = 50% от исходного размера)
+                    .set_position(("left", "bottom")))  # Позиция (можно изменить на нужную)
+
+        # Делаем фон GIF прозрачным (удаляем определенный цвет)
+        gif_clip = gif_clip.fx(vfx.mask_color, color=[0, 0, 0], thr=100, s=5)
+
+        inspect_clip("gif_clip", gif_clip)
+
+        # Накладываем GIF поверх слайд-шоу
+        final_video = CompositeVideoClip([slideshow, gif_clip])
+    else:
+        final_video = slideshow
+    return final_video
+
+def create_slideshow_with_fade(images, audio_duration, image_duration=2, fade_duration=0.5):
+    image_clips = []
+    
+    # Create individual image clips with fade in and fade out
+    for img in images:
+        clip = ImageClip(img).set_duration(image_duration)
+        # Apply fade in and fade out effect
+        clip = clip.crossfadein(fade_duration).crossfadeout(fade_duration)
+        image_clips.append(clip)
+
+    # Concatenate images to form a slideshow
+    slideshow = concatenate_videoclips(image_clips, method="compose")
+
+    # Loop the slideshow to match the audio duration
+    looped_slideshow = slideshow.loop(duration=audio_duration)
+
+    return looped_slideshow
 
 
 def inspect_clip(name, clip, debug=False):

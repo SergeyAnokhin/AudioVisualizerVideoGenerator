@@ -16,6 +16,21 @@ def process_folders(base_folder, num_workers=1):
     # Используем параллельную обработку
     # with ProcessPoolExecutor(max_workers=num_workers) as executor:
     #     executor.map(create_video_from_folder, folders, [gif_file]*len(folders))
+    
+    num_cores = os.cpu_count()
+    duration = 350
+    print("Use all CPU cores: ", num_cores)
+    
+    chunk_size = duration / num_cores
+    for chunk_number in range(num_cores):
+        start = chunk_number * chunk_size
+        end = min(start + chunk_size, duration)
+
+        # Generate the chunk
+        chunk = (start, end)
+        print(f"- Chunk number {chunk_number}: {chunk}")
+
+    
     convertor.create_video_from_folder(folders[0], gif_file)
 
 
@@ -23,7 +38,6 @@ def process_folders(base_folder, num_workers=1):
 if __name__ == "__main__":
 
     # Установить переменную окружения динамически на основе количества доступных ядер
-    print("Use all CPU cores: ", os.cpu_count())
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
 
     base_folder = "../"  # Укажите путь к основной папке, содержащей папки Clip

@@ -23,105 +23,128 @@ from moviepy.editor import VideoClip
 
 def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
                           colormap=cv2.COLORMAP_JET, circle_radius=100,
-                          center_dot_size=30, edge_dot_size=5,
+                          center_dot_size=15, edge_dot_size=5,
                           colormap_positions=[0.0, 0.33, 0.66, 1.0],
-                          num_dots=20):
-    # Load audio file
+                          num_dots=10,
+                          circle_vertical_position_percent=10,
+                          amplitude_threshold=0.05,
+                          amplification=1.0):
+    # Загружаем аудио файл
     y, sr = librosa.load(audio_file, sr=None, mono=False)
 
-    # Ensure audio is stereo
+    # Убедимся, что аудио стерео
     if y.ndim == 1:
         y = np.array([y, y])
 
-    # Audio processing parameters
+    # Параметры для обработки аудио
     hop_length = int(sr / fps)
     n_fft = 2048
 
-    # Get amplitude envelopes for left and right channels
+    # Получаем амплитудные спектры для левого и правого каналов
     S_left = np.abs(librosa.stft(y[0], n_fft=n_fft, hop_length=hop_length))
     S_right = np.abs(librosa.stft(y[1], n_fft=n_fft, hop_length=hop_length))
 
-    # Average over frequencies to get amplitude over time
+    # Усредняем по частотам для получения амплитудных огибающих
     left_env = np.mean(S_left, axis=0)
     right_env = np.mean(S_right, axis=0)
 
-    # Normalize amplitudes
+    # Нормализуем амплитуды
     max_amp = max(left_env.max(), right_env.max())
     left_env /= max_amp
     right_env /= max_amp
 
-    # Ensure number of frames matches duration and fps
+    # Применяем усиление
+    left_env *= amplification
+    right_env *= amplification
+
+    # Ограничиваем амплитуды в диапазоне [0, 1]
+    left_env = np.clip(left_env, 0, 1)
+    right_env = np.clip(right_env, 0, 1)
+
+    # Убеждаемся, что количество кадров соответствует длительности и fps
     num_frames = int(duration * fps)
     left_env = np.interp(np.linspace(0, len(left_env), num_frames),
                          np.arange(len(left_env)), left_env)
     right_env = np.interp(np.linspace(0, len(right_env), num_frames),
                           np.arange(len(right_env)), right_env)
 
-    # Precompute dot positions within the circle
+    # Вычисляем позиции точек внутри окружности
     def compute_dot_positions(center):
         positions = []
         for i in range(num_dots):
             for j in range(num_dots):
-                # Normalized positions between -1 and 1
+                # Нормализованные позиции между -1 и 1
                 x_norm = -1 + 2 * i / (num_dots - 1)
                 y_norm = -1 + 2 * j / (num_dots - 1)
-                # Check if within circle
+                # Проверяем, что точка внутри окружности
                 if x_norm**2 + y_norm**2 <= 1:
                     x = center[0] + x_norm * circle_radius
                     y = center[1] + y_norm * circle_radius
                     positions.append((int(x), int(y), x_norm, y_norm))
         return positions
 
-    # Compute dot positions for left and right circles
-    left_center = (int(size[0] * 0.1), int(size[1] * 0.1))   # Left top corner
-    right_center = (int(size[0] * 0.9), int(size[1] * 0.1))  # Right top corner
+    # Позиции окружностей
+    vertical_pos = size[1] * (circle_vertical_position_percent / 100)
+
+    left_center = (int(size[0] * 0.1), int(vertical_pos))   # Левый динамик
+    right_center = (int(size[0] * 0.9), int(vertical_pos))  # Правый динамик
 
     left_positions = compute_dot_positions(left_center)
     right_positions = compute_dot_positions(right_center)
 
-    # Generate colors from colormap at specified positions
+    # Генерируем цвета из колormap по заданным позициям
     colormap_colors = [cv2.applyColorMap(
         np.array([[int(pos * 255)]], dtype=np.uint8), colormap)[0][0]
         for pos in colormap_positions]
-    # Convert BGR to RGB
+    # Конвертируем BGR в RGB
     colormap_colors = [(int(c[2]), int(c[1]), int(c[0])) for c in colormap_colors]
 
     def make_frame(t):
-        # Create empty RGB frame
-        frame = np.zeros((size[1], size[0], 3), dtype=np.uint8)
-        # Create mask
-        mask = np.zeros((size[1], size[0]), dtype=np.uint8)
-
+        # Получаем индекс текущего кадра
         frame_idx = int(t * fps)
         if frame_idx >= num_frames:
             frame_idx = num_frames - 1
 
-        # Get amplitudes for this frame
+        # Получаем амплитуды для текущего кадра
         left_amp = left_env[frame_idx]
         right_amp = right_env[frame_idx]
 
-        # Calculate dot sizes based on amplitude and position
+        # Проверяем порог амплитуды
+        if left_amp < amplitude_threshold and right_amp < amplitude_threshold:
+            # Возвращаем пустой прозрачный кадр
+            frame = np.zeros((size[1], size[0], 3), dtype=np.uint8)
+            mask = np.zeros((size[1], size[0]), dtype=np.uint8)
+            return frame, mask
+
+        # Создаем пустой кадр и маску
+        frame = np.zeros((size[1], size[0], 3), dtype=np.uint8)
+        mask = np.zeros((size[1], size[0]), dtype=np.uint8)
+
+        # Функция для рисования точек
         def draw_dots(positions, amp):
             for x, y, x_norm, y_norm in positions:
-                # Calculate size based on position (larger in center)
+                # Вычисляем размер точки на основе позиции и амплитуды
                 distance = np.sqrt(x_norm**2 + y_norm**2)
-                size = edge_dot_size + (center_dot_size - edge_dot_size) * (1 - distance)
-                size = size * (0.5 + 0.5 * amp)  # Adjust size based on amplitude
-                size = max(1, int(size))
+                dot_size = edge_dot_size + (center_dot_size - edge_dot_size) * (1 - distance)
+                dot_size = dot_size * (0.5 + 0.5 * amp)  # Регулируем размер по амплитуде
+                dot_size = max(1, int(dot_size))
 
-                # Draw four mini-dots with colors from the palette
+                # Рисуем четыре мини-точки с разными цветами
                 for idx, color in enumerate(colormap_colors):
-                    offset = (idx - 1.5) * size / 4  # Position mini-dots around the main position
-                    cv2.circle(frame, (int(x + offset), int(y + offset)), size // 4, color, -1)
-                    cv2.circle(mask, (int(x + offset), int(y + offset)), size // 4, 255, -1)
+                    offset = (idx - 1.5) * dot_size / 4  # Позиционируем мини-точки вокруг основной точки
+                    xi = int(x + offset)
+                    yi = int(y + offset)
+                    if 0 <= xi < size[0] and 0 <= yi < size[1]:
+                        cv2.circle(frame, (xi, yi), dot_size // 4, color, -1)
+                        cv2.circle(mask, (xi, yi), dot_size // 4, 255, -1)
 
-        # Draw dots for left and right speakers
+        # Рисуем точки для левого и правого динамиков
         draw_dots(left_positions, left_amp)
         draw_dots(right_positions, right_amp)
 
-        return frame, mask / 255.0  # Return frame and mask
+        return frame, mask / 255.0  # Возвращаем кадр и маску
 
-    # Create VideoClips for frame and mask
+    # Создаем VideoClip для кадра и маски
     def make_frame_rgb(t):
         frame, _ = make_frame(t)
         return frame
@@ -130,14 +153,16 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
         _, mask = make_frame(t)
         return mask
 
-    # Create video clip for frame
+    # Создаем видео клип для кадра
     equalizer_clip = VideoClip(make_frame_rgb, duration=duration).set_fps(fps)
-    # Create mask
+    # Создаем маску
     mask_clip = VideoClip(make_frame_mask, ismask=True, duration=duration).set_fps(fps)
-    # Set mask for the clip
+    # Устанавливаем маску для клипа
     equalizer_clip = equalizer_clip.set_mask(mask_clip)
 
     return equalizer_clip
+
+
 
 
 

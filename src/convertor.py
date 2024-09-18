@@ -28,7 +28,7 @@ def create_video_from_folder(folder, gif_file=None):
     # Создаем слайд-шоу с повторением и затемнением
     print("⏩Create looping slideshow with fade transition")
     slideshow = create_slideshow_with_fade(images, audio_duration=audio_duration, 
-                                           image_duration=image_duration, fade_duration=0.5)
+                                           image_duration=image_duration, fade_duration=0.3)
 
 
     inspect_clip("slideshow", slideshow)
@@ -45,7 +45,14 @@ def create_video_from_folder(folder, gif_file=None):
     #                     size=final_video.size, colormap=cv2.COLORMAP_AUTUMN,
     #                     equalizer_width_percent=30, max_bar_height_percent=30)
     equalizer_clip = equalizers.create_equalizer_clip(audio_file, duration=audio_duration,
-                        size=final_video.size, colormap=cv2.COLORMAP_AUTUMN)
+                        size=final_video.size, 
+                        colormap=cv2.COLORMAP_JET, circle_radius=200,
+                          center_dot_size=35, edge_dot_size=5,
+                          colormap_positions=[0.0, 0.33, 0.66, 1.0],
+                          num_dots=30,
+                          circle_vertical_position_percent=7,
+                          amplitude_threshold=0.1,
+                          amplification=5.0)
 
     
     equalizer_clip = equalizer_clip.set_opacity(0.2)  # Опционально: установить прозрачность
@@ -59,7 +66,7 @@ def create_video_from_folder(folder, gif_file=None):
     final_video = CompositeVideoClip([final_video, equalizer_clip])
 
     # fastest for tests:
-    mode = 'quality_test'
+    mode = 'test'
     
     if mode == 'test':
         print("Mode: 🧪Test")

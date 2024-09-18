@@ -23,7 +23,7 @@ def create_video_from_folder(folder, gif_file=None):
     audio_duration = audio.duration
 
     # Длительность каждого изображения (в секундах)
-    image_duration = 2  # Измените на желаемую длительность
+    image_duration = 10  # Измените на желаемую длительность
 
     # Создаем список клипов из изображений
     image_clips = [] 
@@ -48,7 +48,7 @@ def create_video_from_folder(folder, gif_file=None):
     if gif_file and os.path.isfile(gif_file):
         print("✔Gif file found")
 
-        has_mask = has_transparency(gif_file)
+        has_mask = False # has_transparency(gif_file)
         # Загружаем GIF и зацикливаем на всю длительность аудио
         gif_clip = (VideoFileClip(gif_file, has_mask)
                     .loop(duration=audio_duration)

@@ -28,7 +28,8 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
                           num_dots=10,
                           circle_vertical_position_percent=10,
                           amplitude_threshold=0.05,
-                          amplification=1.0):
+                          amplification=1.0,
+                          frequency_bands=[(20, 150), (150, 500), (500, 2000), (2000, 8000)]):
     # Загружаем аудио файл
     y, sr = librosa.load(audio_file, sr=None, mono=False)
 
@@ -40,33 +41,42 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
     hop_length = int(sr / fps)
     n_fft = 2048
 
-    # Получаем амплитудные спектры для левого и правого каналов
+    # Получаем спектрограммы для левого и правого каналов
     S_left = np.abs(librosa.stft(y[0], n_fft=n_fft, hop_length=hop_length))
     S_right = np.abs(librosa.stft(y[1], n_fft=n_fft, hop_length=hop_length))
 
-    # Усредняем по частотам для получения амплитудных огибающих
-    left_env = np.mean(S_left, axis=0)
-    right_env = np.mean(S_right, axis=0)
+    # Частотная шкала
+    frequencies = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
+
+    # Функция для агрегирования спектрограммы по частотным диапазонам
+    def aggregate_band_amplitude(S, band):
+        freq_mask = (frequencies >= band[0]) & (frequencies < band[1])
+        if np.any(freq_mask):
+            return np.mean(S[freq_mask, :], axis=0)
+        else:
+            return np.zeros(S.shape[1])
+
+    # Извлекаем амплитуды для каждого диапазона частот для левого и правого каналов
+    band_amplitudes_left = [aggregate_band_amplitude(S_left, band) for band in frequency_bands]
+    band_amplitudes_right = [aggregate_band_amplitude(S_right, band) for band in frequency_bands]
 
     # Нормализуем амплитуды
-    max_amp = max(left_env.max(), right_env.max())
-    left_env /= max_amp
-    right_env /= max_amp
+    max_amp = max([band.max() for band in band_amplitudes_left + band_amplitudes_right])
+    band_amplitudes_left = [band / max_amp for band in band_amplitudes_left]
+    band_amplitudes_right = [band / max_amp for band in band_amplitudes_right]
 
-    # Применяем усиление
-    left_env *= amplification
-    right_env *= amplification
-
-    # Ограничиваем амплитуды в диапазоне [0, 1]
-    left_env = np.clip(left_env, 0, 1)
-    right_env = np.clip(right_env, 0, 1)
+    # Применяем усиление и ограничиваем амплитуды
+    band_amplitudes_left = [np.clip(band * amplification, 0, 1) for band in band_amplitudes_left]
+    band_amplitudes_right = [np.clip(band * amplification, 0, 1) for band in band_amplitudes_right]
 
     # Убеждаемся, что количество кадров соответствует длительности и fps
     num_frames = int(duration * fps)
-    left_env = np.interp(np.linspace(0, len(left_env), num_frames),
-                         np.arange(len(left_env)), left_env)
-    right_env = np.interp(np.linspace(0, len(right_env), num_frames),
-                          np.arange(len(right_env)), right_env)
+    interpolated_bands_left = [np.interp(np.linspace(0, len(band), num_frames),
+                                         np.arange(len(band)), band)
+                               for band in band_amplitudes_left]
+    interpolated_bands_right = [np.interp(np.linspace(0, len(band), num_frames),
+                                          np.arange(len(band)), band)
+                                for band in band_amplitudes_right]
 
     # Вычисляем позиции точек внутри окружности
     def compute_dot_positions(center):
@@ -105,12 +115,8 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
         if frame_idx >= num_frames:
             frame_idx = num_frames - 1
 
-        # Получаем амплитуды для текущего кадра
-        left_amp = left_env[frame_idx]
-        right_amp = right_env[frame_idx]
-
         # Проверяем порог амплитуды
-        if left_amp < amplitude_threshold and right_amp < amplitude_threshold:
+        if all(band[frame_idx] < amplitude_threshold for band in interpolated_bands_left + interpolated_bands_right):
             # Возвращаем пустой прозрачный кадр
             frame = np.zeros((size[1], size[0], 3), dtype=np.uint8)
             mask = np.zeros((size[1], size[0]), dtype=np.uint8)
@@ -121,26 +127,28 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
         mask = np.zeros((size[1], size[0]), dtype=np.uint8)
 
         # Функция для рисования точек
-        def draw_dots(positions, amp):
+        def draw_dots(positions, band_amplitudes):
             for x, y, x_norm, y_norm in positions:
-                # Вычисляем размер точки на основе позиции и амплитуды
+                # Вычисляем размер точки на основе позиции
                 distance = np.sqrt(x_norm**2 + y_norm**2)
                 dot_size = edge_dot_size + (center_dot_size - edge_dot_size) * (1 - distance)
-                dot_size = dot_size * (0.5 + 0.5 * amp)  # Регулируем размер по амплитуде
-                dot_size = max(1, int(dot_size))
 
                 # Рисуем четыре мини-точки с разными цветами
                 for idx, color in enumerate(colormap_colors):
-                    offset = (idx - 1.5) * dot_size / 4  # Позиционируем мини-точки вокруг основной точки
+                    amp = band_amplitudes[idx][frame_idx]  # Получаем амплитуду из соответствующего диапазона частот
+                    current_dot_size = dot_size * (0.5 + 0.5 * amp)  # Регулируем размер по амплитуде
+                    current_dot_size = max(1, int(current_dot_size))
+                    
+                    offset = (idx - 1.5) * current_dot_size / 4  # Позиционируем мини-точки вокруг основной точки
                     xi = int(x + offset)
                     yi = int(y + offset)
                     if 0 <= xi < size[0] and 0 <= yi < size[1]:
-                        cv2.circle(frame, (xi, yi), dot_size // 4, color, -1)
-                        cv2.circle(mask, (xi, yi), dot_size // 4, 255, -1)
+                        cv2.circle(frame, (xi, yi), current_dot_size // 4, color, -1)
+                        cv2.circle(mask, (xi, yi), current_dot_size // 4, 255, -1)
 
         # Рисуем точки для левого и правого динамиков
-        draw_dots(left_positions, left_amp)
-        draw_dots(right_positions, right_amp)
+        draw_dots(left_positions, interpolated_bands_left)
+        draw_dots(right_positions, interpolated_bands_right)
 
         return frame, mask / 255.0  # Возвращаем кадр и маску
 
@@ -161,8 +169,6 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
     equalizer_clip = equalizer_clip.set_mask(mask_clip)
 
     return equalizer_clip
-
-
 
 
 

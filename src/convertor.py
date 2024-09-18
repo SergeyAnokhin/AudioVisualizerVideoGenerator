@@ -46,7 +46,7 @@ def create_video_from_folder(folder, gif_file=None):
     #                     equalizer_width_percent=30, max_bar_height_percent=30)
     equalizer_clip = equalizers.create_equalizer_clip(audio_file, duration=audio_duration,
                         size=final_video.size, 
-                        colormap=cv2.COLORMAP_JET, circle_radius=200,
+                        colormap=cv2.COLORMAP_JET, circle_radius=400,
                           center_dot_size=35, edge_dot_size=5,
                           colormap_positions=[0.0, 0.33, 0.66, 1.0],
                           num_dots=30,

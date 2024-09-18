@@ -18,7 +18,7 @@ def process_folders(base_folder, num_workers=1):
 
     # Determine the number of CPU cores or use the specified number of workers
     num_cores = num_workers if num_workers else os.cpu_count()
-    print("Using CPU cores: ", num_cores)
+    print(f"Using CPU cores: {num_cores}. Total CPUs: {os.cpu_count()}")
 
     # convertor.create_video_from_folder(folder, gif_file, None)
 
@@ -26,11 +26,14 @@ def process_folders(base_folder, num_workers=1):
     parts = list(range(num_cores))  # Creating a list of parts from 0 to num_cores - 1
 
     # Prepare arguments for create_video_from_folder
-    args = [(folder, gif_file, part) for part in parts]
+    args = [(folder, gif_file, part, num_cores) for part in parts]
 
-    # Process the folder in parallel
-    with Pool(processes=num_cores) as pool:
-        pool.starmap(convertor.create_video_from_folder, args)
+    if num_cores > 1:
+        # Process the folder in parallel
+        with Pool(processes=num_cores) as pool:
+            pool.starmap(convertor.create_video_from_folder, args)
+    else:
+        convertor.create_video_from_folder(folder, gif_file, 0, num_cores)
         
     # folder = 'path/to/your/videos'
     video_files = sorted([os.path.join(base_folder, f) for f in os.listdir(base_folder) if f.endswith('.mp4') and f.startswith('Clip1')])
@@ -47,6 +50,6 @@ if __name__ == "__main__":
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
 
     base_folder = "../"  # Укажите путь к основной папке, содержащей папки Clip
-    num_workers = 4  # Количество параллельных процессов
+    num_workers = 1  # Количество параллельных процессов
 
     process_folders(base_folder, num_workers)

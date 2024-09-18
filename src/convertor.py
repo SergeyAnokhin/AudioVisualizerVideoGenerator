@@ -4,7 +4,7 @@ import cv2
 import equalizers
 from PIL import Image
 
-def create_video_from_folder(folder, gif_file=None, part=None):
+def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
     print(f"Start creating from: 📂{folder} Part # -{part}-", )
 
     # Путь к аудио-файлу
@@ -23,8 +23,8 @@ def create_video_from_folder(folder, gif_file=None, part=None):
     audio = AudioFileClip(audio_file)
     audio_duration = audio.duration
 
-    start, end = get_segment_duration(audio_duration, part, os.cpu_count())
-    print(f"PART: Start-End: {start} -> {end}")
+    start, end = get_segment_duration(audio_duration, part, num_cores)
+    print(f"PART {part}: ⏱ [{start:.0f}...{end:.0f}] secs")
 
     # Длительность каждого изображения (в секундах)
     image_duration = 10  # Измените на желаемую длительность
@@ -75,7 +75,7 @@ def create_video_from_folder(folder, gif_file=None, part=None):
     if mode == 'test':
         print("Mode: 🧪Test")
         final_video = final_video.resize(0.5)
-        if part:
+        if num_cores > 1:
             final_video = final_video.subclip(start, end)
         else:
             final_video = final_video.subclip(25, 35) # Start at 0 seconds and end at 10 seconds
@@ -86,7 +86,7 @@ def create_video_from_folder(folder, gif_file=None, part=None):
     elif mode == 'quality_test':
         print("Mode: 🧪👍 Quality Test")
         # final_video = final_video.resize(0.5)
-        if part:
+        if num_cores > 1:
             final_video = final_video.subclip(start, end)
         else:
             final_video = final_video.subclip(25, 35) # Start at 0 seconds and end at 10 seconds
@@ -107,7 +107,7 @@ def create_video_from_folder(folder, gif_file=None, part=None):
 
 
     # Сохраняем финальное видео
-    output_file = f"{folder}_output_video_{part}_{start}-{end}.mp4"
+    output_file = f"{folder}_output_video_{part}_{start:.0f}-{end:.0f}.mp4"
     final_video.write_videofile(output_file, fps=fps, threads=os.cpu_count(), codec=codec, preset=preset) # ,bitrate=bitrate
     print(f"Video created: {output_file}")
 

@@ -1,6 +1,7 @@
 from moviepy.editor import *
 import os
 import convertor
+from multiprocessing import Pool
 
 def process_folders(base_folder, num_workers=1):
     # Поиск всех папок, начинающихся с "Clip"
@@ -10,36 +11,24 @@ def process_folders(base_folder, num_workers=1):
 
     print('Folders found: ', folders)
 
-    # Путь к GIF-файлу (если есть)
-    gif_file = base_folder + "static/animated2.gif"  # Вы можете указать путь к вашему GIF-файлу
+    folder = folders[0]
 
-    # Используем параллельную обработку
-    # with ProcessPoolExecutor(max_workers=num_workers) as executor:
-    #     executor.map(create_video_from_folder, folders, [gif_file]*len(folders))
-    
-    num_cores = os.cpu_count()
-    duration = 350
-    print("Use all CPU cores: ", num_cores)
-    
-    chunk_size = duration / num_cores
-    for chunk_number in range(num_cores):
-        start = chunk_number * chunk_size
-        end = min(start + chunk_size, duration)
+    # Path to the GIF file (if needed)
+    gif_file = os.path.join(base_folder, "static", "animated2.gif")  # Ensure the path is correct
 
-        # Generate the chunk
-        chunk = (start, end)
-        print(f"- Chunk number {chunk_number}: {chunk}")
+    # Determine the number of CPU cores or use the specified number of workers
+    num_cores = num_workers if num_workers else os.cpu_count()
+    print("Using CPU cores: ", num_cores)
 
-    # with Pool(num_cores) as pool:
-    #     pool.map(create_video_from_folder, range(num_cores)) ???
+    # Determine parts based on the number of cores
+    parts = list(range(num_cores))  # Creating a list of parts from 0 to num_cores - 1
 
-    # Join:
-    # clips = [VideoFileClip(f"output_{start}_{end}.mp4") for start, end in chunks]
-    # final_clip = concatenate_videoclips(clips)
-    # final_clip.write_videofile("final_output_video.mp4", threads=4)
-    
-    convertor.create_video_from_folder(folders[0], gif_file)
+    # Prepare arguments for create_video_from_folder
+    args = [(folder, gif_file, part) for part in parts]
 
+    # Process the folder in parallel
+    with Pool(processes=num_cores) as pool:
+        pool.starmap(convertor.create_video_from_folder, args)
 
 # Основной запуск
 if __name__ == "__main__":
@@ -48,6 +37,6 @@ if __name__ == "__main__":
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
 
     base_folder = "../"  # Укажите путь к основной папке, содержащей папки Clip
-    num_workers = 1  # Количество параллельных процессов
+    num_workers = 4  # Количество параллельных процессов
 
     process_folders(base_folder, num_workers)

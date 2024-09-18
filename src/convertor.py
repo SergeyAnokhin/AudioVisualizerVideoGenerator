@@ -4,11 +4,12 @@ import cv2
 import equalizers
 from PIL import Image
 
-def create_video_from_folder(folder, gif_file=None):
-    print("Start creating from: 📂", folder)
+def create_video_from_folder(folder, gif_file=None, part=None):
+    print(f"Start creating from: 📂{folder} Part # -{part}-", )
 
     # Путь к аудио-файлу
-    audio_file = os.path.join(folder, "music.mp3")
+    audio_file = [os.path.join(folder, music) \
+                    for music in os.listdir(folder) if music.endswith(('.mp3'))][0] # os.path.join(folder, "music.mp3")
 
     # Проверяем, существует ли аудио-файл
     if not os.path.isfile(audio_file):
@@ -22,13 +23,16 @@ def create_video_from_folder(folder, gif_file=None):
     audio = AudioFileClip(audio_file)
     audio_duration = audio.duration
 
+    start, end = get_segment_duration(audio_duration, part, os.cpu_count())
+    print(f"PART: Start-End: {start} -> {end}")
+
     # Длительность каждого изображения (в секундах)
     image_duration = 10  # Измените на желаемую длительность
     
     # Создаем слайд-шоу с повторением и затемнением
     print("⏩Create looping slideshow with fade transition")
     slideshow = create_slideshow_with_fade(images, audio_duration=audio_duration, 
-                                           image_duration=image_duration, fade_duration=0.3)
+                                           image_duration=image_duration, fade_duration=0.1)
 
 
     inspect_clip("slideshow", slideshow)
@@ -71,7 +75,10 @@ def create_video_from_folder(folder, gif_file=None):
     if mode == 'test':
         print("Mode: 🧪Test")
         final_video = final_video.resize(0.5)
-        final_video = final_video.subclip(25, 35) # Start at 0 seconds and end at 10 seconds
+        if part:
+            final_video = final_video.subclip(start, end)
+        else:
+            final_video = final_video.subclip(25, 35) # Start at 0 seconds and end at 10 seconds
         fps = 6
         preset = 'ultrafast' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
@@ -79,12 +86,16 @@ def create_video_from_folder(folder, gif_file=None):
     elif mode == 'quality_test':
         print("Mode: 🧪👍 Quality Test")
         # final_video = final_video.resize(0.5)
-        final_video = final_video.subclip(25, 35) # Start at 0 seconds and end at 10 seconds
+        if part:
+            final_video = final_video.subclip(start, end)
+        else:
+            final_video = final_video.subclip(25, 35) # Start at 0 seconds and end at 10 seconds
         fps = 24
         preset = 'medium' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
         bitrate='100k' # 500k, 1M
     else:
+        final_video = final_video.subclip(start, end)
         print("Mode: 👍Final")
         fps = 24
         preset = 'medium' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
@@ -96,13 +107,45 @@ def create_video_from_folder(folder, gif_file=None):
 
 
     # Сохраняем финальное видео
-    output_file = f"{folder}_output_video.mp4"
+    output_file = f"{folder}_output_video_{part}.mp4"
     final_video.write_videofile(output_file, fps=fps, threads=os.cpu_count(), codec=codec, preset=preset) # ,bitrate=bitrate
     print(f"Video created: {output_file}")
 
 
 
 
+
+def merge_videos(output_file, *video_files):
+    
+    # folder = 'path/to/your/videos'
+    # video_files = sorted([os.path.join(folder, f) for f in os.listdir(folder) if f.endswith('.mp4')])
+
+    # # Output file path
+    # output_file = os.path.join(folder, "merged_output_video.mp4")
+    
+    # Load all video clips
+    clips = [VideoFileClip(file) for file in video_files]
+    
+    # Concatenate all clips into one
+    final_clip = concatenate_videoclips(clips, method="compose")
+    
+    # Write the result to a file
+    final_clip.write_videofile(output_file, codec="libx264", threads=4)
+
+
+def get_segment_duration(total_duration, segment_number, total_segments):
+    # Вычисляем длительность одного сегмента
+    segment_length = total_duration // total_segments
+    
+    # Определяем начало и конец сегмента
+    start_time = (segment_number - 1) * segment_length
+    end_time = start_time + segment_length - 1
+    
+    # Если это последний сегмент, корректируем конечное время
+    if segment_number == total_segments:
+        end_time = total_duration - 1
+    
+    return start_time, end_time
 
 def add_gif(gif_file, audio_duration, slideshow):
     if gif_file and os.path.isfile(gif_file):

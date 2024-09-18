@@ -59,13 +59,22 @@ def create_video_from_folder(folder, gif_file=None):
     final_video = CompositeVideoClip([final_video, equalizer_clip])
 
     # fastest for tests:
-    is_test = True
-    if is_test:
+    mode = 'quality_test'
+    
+    if mode == 'test':
         print("Mode: 🧪Test")
         final_video = final_video.resize(0.5)
         final_video = final_video.subclip(25, 35) # Start at 0 seconds and end at 10 seconds
         fps = 6
         preset = 'ultrafast' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
+        codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
+        bitrate='100k' # 500k, 1M
+    elif mode == 'quality_test':
+        print("Mode: 🧪👍 Quality Test")
+        # final_video = final_video.resize(0.5)
+        final_video = final_video.subclip(25, 35) # Start at 0 seconds and end at 10 seconds
+        fps = 24
+        preset = 'medium' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
         bitrate='100k' # 500k, 1M
     else:

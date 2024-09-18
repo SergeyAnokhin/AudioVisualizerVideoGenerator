@@ -30,6 +30,13 @@ def process_folders(base_folder, num_workers=1):
         chunk = (start, end)
         print(f"- Chunk number {chunk_number}: {chunk}")
 
+    # with Pool(num_cores) as pool:
+    #     pool.map(create_video_from_folder, range(num_cores)) ???
+
+    # Join:
+    # clips = [VideoFileClip(f"output_{start}_{end}.mp4") for start, end in chunks]
+    # final_clip = concatenate_videoclips(clips)
+    # final_clip.write_videofile("final_output_video.mp4", threads=4)
     
     convertor.create_video_from_folder(folders[0], gif_file)
 

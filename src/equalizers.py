@@ -8,10 +8,6 @@ import cv2
 import librosa
 from moviepy.editor import VideoClip
 
-def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
-                          colormap=cv2.COLORMAP_JET, equalizer_width_percent=20,
-                          num_bars=60):
-    
     # cv2.COLORMAP_AUTUMN
     # cv2.COLORMAP_BONE
     # cv2.COLORMAP_COOL
@@ -25,6 +21,9 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
     # cv2.COLORMAP_SUMMER
     # cv2.COLORMAP_WINTER
 
+def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
+                          colormap=cv2.COLORMAP_JET, equalizer_width_percent=30,
+                          max_bar_height=None, num_bars=60):
     # Загружаем аудио файл
     y, sr = librosa.load(audio_file, sr=None, mono=False)
 
@@ -42,9 +41,6 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
 
     # Частотная шкала
     frequencies = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
-
-    # Определяем количество столбиков (можете настроить)
-    # num_bars = 60
 
     # Определяем границы частот для каждого столбика (логарифмическая шкала)
     freq_bins = np.logspace(np.log10(frequencies[1]), np.log10(frequencies[-1]), num=num_bars+1)
@@ -73,6 +69,10 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
     left_bars = left_bars[times, :]
     right_bars = right_bars[times, :]
 
+    # Устанавливаем максимальную высоту столбиков, если не задано
+    if max_bar_height is None:
+        max_bar_height = int(size[1] * 0.3)  # По умолчанию 30% от высоты кадра
+
     def make_frame(t):
         # Создаем пустой кадр
         frame = np.zeros((size[1], size[0], 3), dtype=np.uint8)
@@ -84,11 +84,10 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
         # Параметры для рисования
         equalizer_width = int(size[0] * (equalizer_width_percent / 100))  # Ширина каждого эквалайзера
         bar_width = equalizer_width // num_bars  # Ширина одного столбика
-        max_bar_height = int(size[1] * 0.3)  # 0.9 Максимальная высота столбика
 
-        # Начальные позиции для левого и правого эквалайзера
-        left_start_x = int(size[0] * 0.1 - equalizer_width / 2) # 0.25
-        right_start_x = int(size[0] * 0.90 - equalizer_width / 2) # 0.75
+        # Начальные позиции для левого и правого эквалайзеров
+        left_start_x = 0  # Левый эквалайзер прижат к левому краю
+        right_start_x = size[0] - equalizer_width  # Правый эквалайзер прижат к правому краю
 
         # Рисуем столбики для левого канала (низкие частоты по краям)
         for i in range(num_bars):
@@ -101,11 +100,11 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
                 np.array([[color_intensity]], dtype=np.uint8), colormap)[0][0]))
             cv2.rectangle(frame, (x, y), (x + bar_width - 2, y + bar_height), color, -1)
 
-        # Рисуем столбики для правого канала
+        # Рисуем столбики для правого канала (столбики идут от правого края к центру)
         for i in range(num_bars):
             amplitude = right_bars[frame_idx, i]
             bar_height = int(amplitude * max_bar_height)
-            x = right_start_x + i * bar_width
+            x = right_start_x + (num_bars - i - 1) * bar_width
             y = 0
             color_intensity = int(amplitude * 255)
             color = tuple(map(int, cv2.applyColorMap(

@@ -1,12 +1,7 @@
 from moviepy.editor import *
 import numpy as np
-import librosa
-import cv2
-
-import numpy as np
 import cv2
 import librosa
-from moviepy.editor import VideoClip
 
     # cv2.COLORMAP_AUTUMN
     # cv2.COLORMAP_BONE
@@ -22,8 +17,8 @@ from moviepy.editor import VideoClip
     # cv2.COLORMAP_WINTER
 
 def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
-                          colormap=cv2.COLORMAP_JET, equalizer_width_percent=30,
-                          max_bar_height=None, num_bars=60):
+                          colormap=cv2.COLORMAP_JET, equalizer_width_percent=10,
+                          max_bar_height_percent=90, num_bars=60):
     # Загружаем аудио файл
     y, sr = librosa.load(audio_file, sr=None, mono=False)
 
@@ -69,25 +64,26 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
     left_bars = left_bars[times, :]
     right_bars = right_bars[times, :]
 
-    # Устанавливаем максимальную высоту столбиков, если не задано
-    if max_bar_height is None:
-        max_bar_height = int(size[1] * 0.3)  # По умолчанию 30% от высоты кадра
+    # Вычисляем параметры один раз перед циклом
+    equalizer_width = int(size[0] * (equalizer_width_percent / 100))  # Ширина каждого эквалайзера
+    bar_width = equalizer_width // num_bars  # Ширина одного столбика
+
+    # Максимальная высота столбика в пикселях
+    max_bar_height = int(size[1] * (max_bar_height_percent / 100))
+
+    # Начальные позиции для левого и правого эквалайзеров
+    left_start_x = 0  # Левый эквалайзер прижат к левому краю
+    right_start_x = size[0] - equalizer_width  # Правый эквалайзер прижат к правому краю
 
     def make_frame(t):
-        # Создаем пустой кадр
+        # Создаем пустой кадр RGB
         frame = np.zeros((size[1], size[0], 3), dtype=np.uint8)
+        # Создаем маску (одноканальный кадр)
+        mask = np.zeros((size[1], size[0]), dtype=np.uint8)
 
         frame_idx = int(t * fps)
         if frame_idx >= num_frames:
             frame_idx = num_frames - 1
-
-        # Параметры для рисования
-        equalizer_width = int(size[0] * (equalizer_width_percent / 100))  # Ширина каждого эквалайзера
-        bar_width = equalizer_width // num_bars  # Ширина одного столбика
-
-        # Начальные позиции для левого и правого эквалайзеров
-        left_start_x = 0  # Левый эквалайзер прижат к левому краю
-        right_start_x = size[0] - equalizer_width  # Правый эквалайзер прижат к правому краю
 
         # Рисуем столбики для левого канала (низкие частоты по краям)
         for i in range(num_bars):
@@ -96,9 +92,13 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
             x = left_start_x + i * bar_width
             y = 0  # Начало от верхнего края
             color_intensity = int(amplitude * 255)
-            color = tuple(map(int, cv2.applyColorMap(
-                np.array([[color_intensity]], dtype=np.uint8), colormap)[0][0]))
-            cv2.rectangle(frame, (x, y), (x + bar_width - 2, y + bar_height), color, -1)
+            color_bgr = cv2.applyColorMap(
+                np.array([[color_intensity]], dtype=np.uint8), colormap)[0][0]
+            color_rgb = (int(color_bgr[2]), int(color_bgr[1]), int(color_bgr[0]))  # Конвертация BGR в RGB
+            # Рисуем столбик на кадре
+            cv2.rectangle(frame, (x, y), (x + bar_width - 2, y + bar_height), color_rgb, -1)
+            # Рисуем столбик на маске (белый цвет - непрозрачный)
+            cv2.rectangle(mask, (x, y), (x + bar_width - 2, y + bar_height), 255, -1)
 
         # Рисуем столбики для правого канала (столбики идут от правого края к центру)
         for i in range(num_bars):
@@ -107,93 +107,31 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
             x = right_start_x + (num_bars - i - 1) * bar_width
             y = 0
             color_intensity = int(amplitude * 255)
-            color = tuple(map(int, cv2.applyColorMap(
-                np.array([[color_intensity]], dtype=np.uint8), colormap)[0][0]))
-            cv2.rectangle(frame, (x, y), (x + bar_width - 2, y + bar_height), color, -1)
+            color_bgr = cv2.applyColorMap(
+                np.array([[color_intensity]], dtype=np.uint8), colormap)[0][0]
+            color_rgb = (int(color_bgr[2]), int(color_bgr[1]), int(color_bgr[0]))  # Конвертация BGR в RGB
+            # Рисуем столбик на кадре
+            cv2.rectangle(frame, (x, y), (x + bar_width - 2, y + bar_height), color_rgb, -1)
+            # Рисуем столбик на маске
+            cv2.rectangle(mask, (x, y), (x + bar_width - 2, y + bar_height), 255, -1)
 
+        return frame, mask / 255.0  # Возвращаем кадр и маску (маска должна быть от 0 до 1)
+
+    # Создаем VideoClip для кадра и маски
+    def make_frame_rgb(t):
+        frame, _ = make_frame(t)
         return frame
 
-    equalizer_clip = VideoClip(make_frame, duration=duration).set_fps(fps)
+    def make_frame_mask(t):
+        _, mask = make_frame(t)
+        return mask
+
+    # Создаем видео клип для кадра
+    equalizer_clip = VideoClip(make_frame_rgb, duration=duration).set_fps(fps)
+    # Создаем маску
+    mask_clip = VideoClip(make_frame_mask, ismask=True, duration=duration).set_fps(fps)
+    # Устанавливаем маску для клипа
+    equalizer_clip = equalizer_clip.set_mask(mask_clip)
+
     return equalizer_clip
-
-
-
-def equalizer_two_circle(audio_file, duration, fps=24, size=(1280, 720)):
-    # Загружаем аудио файл
-    y, sr = librosa.load(audio_file, sr=None, mono=False)
-
-    # Убедимся, что аудио стерео
-    if y.ndim == 1:
-        y = np.array([y, y])
-
-    # Параметры для обработки аудио
-    hop_length = int(sr / fps)
-    n_fft = 2048
-
-    # Получаем амплитудные спектры для левого и правого каналов
-    S_left = np.abs(librosa.stft(y[0], n_fft=n_fft, hop_length=hop_length))
-    S_right = np.abs(librosa.stft(y[1], n_fft=n_fft, hop_length=hop_length))
-
-    # Усредняем по частотам для получения амплитудных огибающих
-    left_env = np.mean(S_left, axis=0)
-    right_env = np.mean(S_right, axis=0)
-
-    # Нормализуем амплитуды
-    left_env /= np.max(left_env)
-    right_env /= np.max(right_env)
-
-    # Убеждаемся, что количество кадров соответствует длительности и fps
-    num_frames = int(duration * fps)
-    left_env = np.interp(np.linspace(0, len(left_env), num_frames), np.arange(len(left_env)), left_env)
-    right_env = np.interp(np.linspace(0, len(right_env), num_frames), np.arange(len(right_env)), right_env)
-
-    def make_frame(t):
-        frame = np.zeros((size[1], size[0], 3), dtype=np.uint8)
-        frame[:] = (0, 0, 0)  # Черный фон
-
-        frame_idx = int(t * fps)
-        if frame_idx >= num_frames:
-            frame_idx = num_frames - 1
-
-        # Параметры для рисования
-        center_left = (int(size[0]*0.25), int(size[1]*0.5))
-        center_right = (int(size[0]*0.75), int(size[1]*0.5))
-        radius = 50  # Радиус центрального круга
-        num_bars = 30  # Количество столбиков вокруг круга
-        max_bar_length = 100  # Максимальная длина столбика
-
-        # Рисуем центральные круги
-        cv2.circle(frame, center_left, radius, (255, 255, 255), thickness=-1)
-        cv2.circle(frame, center_right, radius, (255, 255, 255), thickness=-1)
-
-        # Углы для столбиков
-        angles = np.linspace(0, 2*np.pi, num_bars, endpoint=False)
-
-        # Столбики левого канала
-        amplitude = left_env[frame_idx]
-        for angle in angles:
-            x1 = int(center_left[0] + radius * np.cos(angle))
-            y1 = int(center_left[1] + radius * np.sin(angle))
-            bar_length = int(amplitude * max_bar_length)
-            x2 = int(center_left[0] + (radius + bar_length) * np.cos(angle))
-            y2 = int(center_left[1] + (radius + bar_length) * np.sin(angle))
-            color = (0, 255, 0)  # Зеленый цвет для левого канала
-            cv2.line(frame, (x1, y1), (x2, y2), color, thickness=4)
-
-        # Столбики правого канала
-        amplitude = right_env[frame_idx]
-        for angle in angles:
-            x1 = int(center_right[0] + radius * np.cos(angle))
-            y1 = int(center_right[1] + radius * np.sin(angle))
-            bar_length = int(amplitude * max_bar_length)
-            x2 = int(center_right[0] + (radius + bar_length) * np.cos(angle))
-            y2 = int(center_right[1] + (radius + bar_length) * np.sin(angle))
-            color = (0, 0, 255)  # Красный цвет для правого канала
-            cv2.line(frame, (x1, y1), (x2, y2), color, thickness=4)
-
-        return frame
-
-    equalizer_clip = VideoClip(make_frame, duration=duration).set_fps(fps)
-    return equalizer_clip
-
 

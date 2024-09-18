@@ -29,6 +29,14 @@ def process_folders(base_folder, num_workers=1):
     # Process the folder in parallel
     with Pool(processes=num_cores) as pool:
         pool.starmap(convertor.create_video_from_folder, args)
+        
+    # folder = 'path/to/your/videos'
+    video_files = sorted([os.path.join(base_folder, f) for f in os.listdir(base_folder) if f.endswith('.mp4') and f.startswith('Clip1')])
+
+    # # Output file path
+    output_file = os.path.join(folder, "Clip1_output_video.mp4")
+            
+    convertor.merge_videos(output_file, video_files)
 
 # Основной запуск
 if __name__ == "__main__":

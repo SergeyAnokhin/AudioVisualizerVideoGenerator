@@ -107,7 +107,7 @@ def create_video_from_folder(folder, gif_file=None, part=None):
 
 
     # Сохраняем финальное видео
-    output_file = f"{folder}_output_video_{part}.mp4"
+    output_file = f"{folder}_output_video_{part}_{start}-{end}.mp4"
     final_video.write_videofile(output_file, fps=fps, threads=os.cpu_count(), codec=codec, preset=preset) # ,bitrate=bitrate
     print(f"Video created: {output_file}")
 
@@ -115,7 +115,7 @@ def create_video_from_folder(folder, gif_file=None, part=None):
 
 
 
-def merge_videos(output_file, *video_files):
+def merge_videos(output_file, video_files):
     
     # folder = 'path/to/your/videos'
     # video_files = sorted([os.path.join(folder, f) for f in os.listdir(folder) if f.endswith('.mp4')])
@@ -138,11 +138,11 @@ def get_segment_duration(total_duration, segment_number, total_segments):
     segment_length = total_duration // total_segments
     
     # Определяем начало и конец сегмента
-    start_time = (segment_number - 1) * segment_length
+    start_time = segment_number * segment_length
     end_time = start_time + segment_length - 1
     
     # Если это последний сегмент, корректируем конечное время
-    if segment_number == total_segments:
+    if segment_number == total_segments + 1:
         end_time = total_duration - 1
     
     return start_time, end_time

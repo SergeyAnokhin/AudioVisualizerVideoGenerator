@@ -88,7 +88,7 @@ def create_video_from_folder(folder, gif_file=None):
     if is_test:
         print("Mode: 🧪Test")
         final_video = final_video.resize(0.5)
-        # final_video = final_video.subclip(10, 30) # Start at 0 seconds and end at 10 seconds
+        final_video = final_video.subclip(10, 70) # Start at 0 seconds and end at 10 seconds
         fps = 6
         preset = 'ultrafast' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora

@@ -1,4 +1,4 @@
-from model import Profile
+from model import Crop, Profile
 from moviepy.editor import *
 import os
 import convertor
@@ -52,7 +52,7 @@ def process_folders(base_folder, num_workers=1):
             fps=6,
             resize=0.5,
             crop=Crop(start=5, end=35),
-            preset="ultrafast"
+            preset="faster"
         ),
         "quality_test": Profile(
             name="🧪👍 Quality Test",

@@ -4,7 +4,7 @@ import cv2
 import equalizers
 import tools
 
-def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
+def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1, fps=24):
     print(f"Start creating from: 📂{folder} Part # -{part}-", )
 
     # Путь к аудио-файлу
@@ -63,7 +63,7 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
                           num_dots=30,
                           circle_vertical_position_percent=7,
                           amplitude_threshold=0.5,
-                          debug_mode=False,
+                          debug_mode=False, fps=fps,
                           frequency_bands=frequency_bands)
 
     
@@ -82,8 +82,8 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
         if num_cores > 1:
             final_video = final_video.subclip(start, end)
         elif audio_duration > 35:
-            final_video = final_video.subclip(25, 45) # Start at 0 seconds and end at 10 seconds
-        fps = 6 # 6, 24, 60
+            final_video = final_video.subclip(5, 35) # Start at 0 seconds and end at 10 seconds
+        # fps = 6 # 6, 24, 60
         preset = 'ultrafast' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
     elif mode == 'quality_test':
@@ -93,21 +93,21 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
             final_video = final_video.subclip(start, end)
         elif audio_duration > 35:
             final_video = final_video.subclip(25, 45) # Start at 0 seconds and end at 10 seconds
-        fps = 60
+        # fps = 60
         preset = 'faster' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
     elif mode == 'final_fast':
         print("Mode: 👍Final fast 🏃💨")
         if num_cores > 1:
             final_video = final_video.subclip(start, end)
-        fps = 60 # 6, 24, 60
+        # fps = 60 # 6, 24, 60
         preset = 'faster' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
     else:
         if num_cores > 1:
             final_video = final_video.subclip(start, end)
         print("Mode: 👍Final")
-        fps = 24 # 24, 60
+        # fps = 24 # 24, 60
         preset = 'medium' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec= 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
         bitrate=None

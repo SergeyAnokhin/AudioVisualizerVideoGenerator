@@ -51,7 +51,7 @@ def process_folders(base_folder, num_workers=1):
     parts = list(range(num_cores))  # Creating a list of parts from 0 to num_cores - 1
 
     # Prepare arguments for create_video_from_folder
-    args = [(folder, gif_file, part, num_cores) for part in parts]
+    args = [(folder, gif_file, part, num_cores, 6) for part in parts]
 
     if num_cores > 1:
         # Process the folder in parallel
@@ -65,7 +65,7 @@ def process_folders(base_folder, num_workers=1):
                 
         convertor.merge_videos(output_file, video_files)
     else:
-        convertor.create_video_from_folder(folder, gif_file, 0, num_cores)
+        convertor.create_video_from_folder(folder, gif_file, 0, num_cores, fps=24)
         
 
 # Основной запуск

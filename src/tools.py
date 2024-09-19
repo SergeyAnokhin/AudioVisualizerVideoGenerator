@@ -92,7 +92,7 @@ def add_gif(gif_file, audio_duration, slideshow):
         has_mask = False # has_transparency(gif_file)
         # Загружаем GIF и зацикливаем на всю длительность аудио
         gif_clip = (VideoFileClip(gif_file, has_mask)
-                    .loop(duration=audio_duration)
+                    .loop(duration=(9.0 * 2.0)) # two times # duration=audio_duration)
                     # .resize(0.5)  # Масштабирование (0.5 = 50% от исходного размера)
                     .set_position(("left", "bottom")))  # Позиция (можно изменить на нужную)
 

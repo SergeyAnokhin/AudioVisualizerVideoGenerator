@@ -29,7 +29,8 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
                           circle_vertical_position_percent=10,
                           amplitude_threshold=0.05,
                           amplification=1.0,
-                          frequency_bands=[(20, 150), (150, 500), (500, 2000), (2000, 8000)]):
+                          frequency_bands=[(20, 150), (150, 500), (500, 2000), (2000, 8000)],
+                          debug_mode=False):
     # Загружаем аудио файл
     y, sr = librosa.load(audio_file, sr=None, mono=False)
 
@@ -62,6 +63,8 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
 
     # Нормализуем амплитуды
     max_amp = max([band.max() for band in band_amplitudes_left + band_amplitudes_right])
+    if max_amp == 0:
+        max_amp = 1e-6  # Избегаем деления на ноль
     band_amplitudes_left = [band / max_amp for band in band_amplitudes_left]
     band_amplitudes_right = [band / max_amp for band in band_amplitudes_right]
 
@@ -71,10 +74,10 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
 
     # Убеждаемся, что количество кадров соответствует длительности и fps
     num_frames = int(duration * fps)
-    interpolated_bands_left = [np.interp(np.linspace(0, len(band), num_frames),
+    interpolated_bands_left = [np.interp(np.linspace(0, len(band) - 1, num_frames),
                                          np.arange(len(band)), band)
                                for band in band_amplitudes_left]
-    interpolated_bands_right = [np.interp(np.linspace(0, len(band), num_frames),
+    interpolated_bands_right = [np.interp(np.linspace(0, len(band) - 1, num_frames),
                                           np.arange(len(band)), band)
                                 for band in band_amplitudes_right]
 
@@ -129,26 +132,56 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
         # Функция для рисования точек
         def draw_dots(positions, band_amplitudes):
             for x, y, x_norm, y_norm in positions:
-                # Вычисляем размер точки на основе позиции
+                # Вычисляем базовый размер точки на основе позиции
                 distance = np.sqrt(x_norm**2 + y_norm**2)
                 dot_size = edge_dot_size + (center_dot_size - edge_dot_size) * (1 - distance)
 
                 # Рисуем четыре мини-точки с разными цветами
                 for idx, color in enumerate(colormap_colors):
                     amp = band_amplitudes[idx][frame_idx]  # Получаем амплитуду из соответствующего диапазона частот
-                    current_dot_size = dot_size * (0.5 + 0.5 * amp)  # Регулируем размер по амплитуде
+                    # Увеличиваем диапазон изменения размера точек
+                    current_dot_size = dot_size * (0.2 + 0.8 * amp)  # Регулируем размер по амплитуде
                     current_dot_size = max(1, int(current_dot_size))
-                    
-                    offset = (idx - 1.5) * current_dot_size / 4  # Позиционируем мини-точки вокруг основной точки
+
+                    offset = (idx - 1.5) * current_dot_size / 3  # Позиционируем мини-точки вокруг основной точки
                     xi = int(x + offset)
                     yi = int(y + offset)
                     if 0 <= xi < size[0] and 0 <= yi < size[1]:
-                        cv2.circle(frame, (xi, yi), current_dot_size // 4, color, -1)
-                        cv2.circle(mask, (xi, yi), current_dot_size // 4, 255, -1)
+                        cv2.circle(frame, (xi, yi), current_dot_size // 2, color, -1)
+                        cv2.circle(mask, (xi, yi), current_dot_size // 2, 255, -1)
 
         # Рисуем точки для левого и правого динамиков
         draw_dots(left_positions, interpolated_bands_left)
         draw_dots(right_positions, interpolated_bands_right)
+
+        # If debug mode is on, display debug information
+        if debug_mode:
+            debug_texts = []
+            for idx, band in enumerate(frequency_bands):
+                freq_range = f"{band[0]}-{band[1]} Hz"
+                amplitude = (interpolated_bands_left[idx][frame_idx] + interpolated_bands_right[idx][frame_idx]) / 2
+                amplitude = round(amplitude * 100, 2)
+                debug_texts.append(f"Band {idx+1} ({freq_range}): {amplitude}%")
+                print(f"Band {idx+1} ({freq_range}): {amplitude}%")
+
+            # Position for displaying the text
+            text_x = size[0] // 2 - 200
+            text_y = int(vertical_pos)
+            
+            # Draw a semi-transparent rectangle for better text visibility
+            rect_width = 400
+            rect_height = 30 * len(debug_texts)
+            overlay = frame.copy()
+            cv2.rectangle(overlay, (text_x - 10, text_y - 30), 
+                        (text_x + rect_width, text_y + rect_height), 
+                        (0, 0, 0), -1)
+            alpha = 0.5  # Transparency factor
+            cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
+
+            # Display each line of debug text
+            for i, text in enumerate(debug_texts):
+                cv2.putText(frame, text, (text_x, text_y + i * 30), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.7, (255, 255, 255), 2, cv2.LINE_AA)  # Bright white text with black outline
 
         return frame, mask / 255.0  # Возвращаем кадр и маску
 

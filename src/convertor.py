@@ -47,10 +47,10 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
     print("⏩Create equalizer visualization")
     # Настройка диапазонов частот для каждой из четырех суб-точек с усилением
     frequency_bands = [
-        {'band': (20, 100), 'amplification': 1.2},
+        {'band': (20, 100), 'amplification': 2.0},
         {'band': (100, 300), 'amplification': 4.0},
-        {'band': (300, 500), 'amplification': 10.0},
-        {'band': (500, 8000), 'amplification': 20.0},
+        {'band': (300, 500), 'amplification': 3.0},
+        {'band': (500, 8000), 'amplification': 40.0},
     ]
     # equalizer_clip = equalizers.create_equalizer_clip_bars_upper(audio_file, duration=audio_duration, 
     #                     size=final_video.size, colormap=cv2.COLORMAP_AUTUMN,

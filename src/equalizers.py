@@ -28,9 +28,15 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
                           num_dots=10,
                           circle_vertical_position_percent=10,
                           amplitude_threshold=0.05,
-                          amplification=1.0,
-                          frequency_bands=[(20, 150), (150, 500), (500, 2000), (2000, 8000)],
+                          frequency_bands=None,
                           debug_mode=False):
+    if frequency_bands is None:
+        frequency_bands = [
+            {'band': (20, 150), 'amplification': 1.0},
+            {'band': (150, 500), 'amplification': 1.0},
+            {'band': (500, 2000), 'amplification': 1.0},
+            {'band': (2000, 8000), 'amplification': 1.0},
+        ]
     # Загружаем аудио файл
     y, sr = librosa.load(audio_file, sr=None, mono=False)
 
@@ -57,9 +63,16 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
         else:
             return np.zeros(S.shape[1])
 
-    # Извлекаем амплитуды для каждого диапазона частот для левого и правого каналов
-    band_amplitudes_left = [aggregate_band_amplitude(S_left, band) for band in frequency_bands]
-    band_amplitudes_right = [aggregate_band_amplitude(S_right, band) for band in frequency_bands]
+    # Извлекаем амплитуды для каждого диапазона частот с учетом усиления
+    band_amplitudes_left = []
+    band_amplitudes_right = []
+    for band_info in frequency_bands:
+        band = band_info['band']
+        amplification = band_info.get('amplification', 1.0)
+        amp_left = aggregate_band_amplitude(S_left, band) * amplification
+        amp_right = aggregate_band_amplitude(S_right, band) * amplification
+        band_amplitudes_left.append(amp_left)
+        band_amplitudes_right.append(amp_right)
 
     # Нормализуем амплитуды
     max_amp = max([band.max() for band in band_amplitudes_left + band_amplitudes_right])
@@ -68,9 +81,9 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
     band_amplitudes_left = [band / max_amp for band in band_amplitudes_left]
     band_amplitudes_right = [band / max_amp for band in band_amplitudes_right]
 
-    # Применяем усиление и ограничиваем амплитуды
-    band_amplitudes_left = [np.clip(band * amplification, 0, 1) for band in band_amplitudes_left]
-    band_amplitudes_right = [np.clip(band * amplification, 0, 1) for band in band_amplitudes_right]
+    # Ограничиваем амплитуды в диапазоне [0, 1]
+    band_amplitudes_left = [np.clip(band, 0, 1) for band in band_amplitudes_left]
+    band_amplitudes_right = [np.clip(band, 0, 1) for band in band_amplitudes_right]
 
     # Убеждаемся, что количество кадров соответствует длительности и fps
     num_frames = int(duration * fps)
@@ -121,13 +134,6 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
         if frame_idx >= num_frames:
             frame_idx = num_frames - 1
 
-        # Проверяем порог амплитуды
-        if all(band[frame_idx] < amplitude_threshold for band in interpolated_bands_left):
-            # Возвращаем пустой прозрачный кадр
-            frame = np.zeros((size[1], size[0], 3), dtype=np.uint8)
-            # Маска не нужна, так как кадр пустой
-            return frame
-
         # Создаем пустой кадр
         frame = np.zeros((size[1], size[0], 3), dtype=np.uint8)
 
@@ -141,11 +147,12 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
                 distance = np.sqrt(x_norm**2 + y_norm**2)
                 dot_size = edge_dot_size + (center_dot_size - edge_dot_size) * (1 - distance)
 
+
                 # Рисуем четыре мини-точки с разными цветами
                 for idx, color in enumerate(colormap_colors):
                     amp = band_amplitudes[idx][frame_idx]  # Амплитуда из соответствующего диапазона частот
                     # Увеличиваем диапазон изменения размера точек
-                    current_dot_size = dot_size * (0.2 + 0.8 * amp)  # Регулируем размер по амплитуде
+                    current_dot_size = dot_size * (0.0 + 4.0 * amp)  # Регулируем размер по амплитуде
                     current_dot_size = max(1, int(current_dot_size))
 
                     offset = (idx - 1.5) * current_dot_size / 3  # Позиционируем мини-точки вокруг основной точки
@@ -161,40 +168,67 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
                         'distance': distance,
                         'dot_size': dot_size,
                         'amplitudes': [band[frame_idx] for band in band_amplitudes],
-                        'current_dot_size': current_dot_size
+                        'current_dot_size': current_dot_size // 2
                     })
 
             if channel_name == 'Left' and debug_mode:
                 debug_info.append(frame_debug_info)
 
-        # Рисуем точки для левого канала
-        draw_dots(left_positions, interpolated_bands_left, 'Left')
-        # Рисуем точки для правого канала (можно не рисовать, если интересует только левый)
-        draw_dots(right_positions, interpolated_bands_right, 'Right')
-
         # Если включен режим отладки, выводим информацию на кадр и через print
         if debug_mode:
-            # Отображаем текстовой информации на кадре
+            # Отображаем текстовую информацию на кадре
             debug_texts = []
-            for idx, band in enumerate(frequency_bands):
-                freq_range = f"{band[0]}-{band[1]} Hz"
+            for idx, band_info in enumerate(frequency_bands):
+                freq_range = f"{band_info['band'][0]:6.0f}-{band_info['band'][1]:6.0f} Hz"
                 amplitude = interpolated_bands_left[idx][frame_idx]
-                amplitude_percent = round(amplitude * 100, 2)
-                debug_texts.append(f"Band {idx+1} ({freq_range}): {amplitude_percent}%")
+                amplitude_percent = f"{amplitude * 100:6.0f}%"
+                dot_size = 0
+                if len(debug_info) > 0:
+                    dot_size = debug_info[-1][0]['current_dot_size']
+                debug_texts.append(f"Band {idx+1} ({freq_range}): {amplitude_percent} Size: {dot_size:2.0f}")
+                print(f"Band {idx+1} ({freq_range}): {amplitude_percent} Size: {dot_size:2.0f}")
 
             # Позиция для вывода текста
             text_x = size[0] // 2 - 200
             text_y = int(vertical_pos)
-            
+
+            # Опции шрифта
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.7
+            color = (255, 255, 255)
+            thickness = 2
+
+            # Рисуем прямоугольник позади текста для контраста
+            rect_width = 400
+            rect_height = 30 * len(debug_texts)
+            overlay = frame.copy()
+            cv2.rectangle(overlay, (text_x - 10, text_y - 30),
+                          (text_x + rect_width, text_y + rect_height),
+                          (0, 0, 0), -1)
+            alpha = 0.5  # Прозрачность
+            cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
+
             # Отображаем текстовую информацию
             for i, text in enumerate(debug_texts):
-                cv2.putText(frame, text, (text_x, text_y + i * 30), cv2.FONT_HERSHEY_SIMPLEX,
-                            0.7, (255, 255, 255), 2, cv2.LINE_AA)
+                y_position = text_y + i * 30
+                cv2.putText(frame, text, (text_x, y_position), font,
+                            font_scale, color, thickness, cv2.LINE_AA)
 
             # Выводим отладочную информацию через print
             print(f"Frame {frame_idx}/{num_frames}:")
-            for i, info in enumerate(debug_texts):
+            for info in debug_texts:
                 print(info)
+
+        # Проверяем порог амплитуды
+        if all(band[frame_idx] < amplitude_threshold for band in interpolated_bands_left):
+            # Возвращаем пустой прозрачный кадр
+            return frame
+
+
+        # Рисуем точки для левого канала
+        draw_dots(left_positions, interpolated_bands_left, 'Left')
+        # Рисуем точки для правого канала (можно не рисовать, если интересует только левый)
+        draw_dots(right_positions, interpolated_bands_right, 'Right')
 
         return frame
 

@@ -131,7 +131,7 @@ from moviepy.editor import ImageClip, concatenate_videoclips
 def create_slideshow_with_fade(images, audio_duration, image_duration=2, fade_duration=0.1):
     image_clips = []
     
-    print(f"SLIDES🖼 :: Total images: {len(images)} :: 🔁Looping at ⌛duration: {audio_duration}")
+    print(f"SLIDES🖼 :: Total images: {len(images)} :: 🔁Looping at ⌛duration: {audio_duration} secs")
     # Создаем клипы для каждого изображения с эффектами затемнения и появления
     for img in images:
         clip = ImageClip(img).set_duration(image_duration)
@@ -150,6 +150,7 @@ def create_slideshow_with_fade(images, audio_duration, image_duration=2, fade_du
     
     # Размножаем массив клипов
     replicated_clips = image_clips * num_repeats
+    print(f"SLIDES🖼 :: Replicated images: {len(replicated_clips)} :: 🔁Repeated: {num_repeats} times")
     
     # Конкатенируем размноженные клипы в финальное слайдшоу
     full_slideshow = concatenate_videoclips(replicated_clips, method="compose")

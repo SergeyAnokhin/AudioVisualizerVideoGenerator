@@ -22,7 +22,7 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
     # Длительность аудио-файла
     audio = AudioFileClip(audio_file)
     audio_duration = audio.duration
-    print(f"CONVERTOR :: 🎶Audio ⌛duration: {audio_duration}")
+    print(f"CONVERTOR :: 🎶Audio ⌛duration: {audio_duration} secs")
     
     tools.suggest_frequency_bands(audio_file)
     
@@ -30,7 +30,7 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
     print(f"PART {part}: ⏱ [{start:.0f}...{end:.0f}] secs")
 
     # Длительность каждого изображения (в секундах)
-    image_duration = 1  # Измените на желаемую длительность
+    image_duration = 20  # Измените на желаемую длительность
     
     # Создаем слайд-шоу с повторением и затемнением
     print("⏩Create looping slideshow with fade transition")
@@ -45,6 +45,13 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
 
     # Создаем эквалайзерный клип
     print("⏩Create equalizer visualization")
+    # Настройка диапазонов частот для каждой из четырех суб-точек с усилением
+    frequency_bands = [
+        {'band': (20, 100), 'amplification': 1.2},
+        {'band': (100, 300), 'amplification': 4.0},
+        {'band': (300, 500), 'amplification': 10.0},
+        {'band': (500, 8000), 'amplification': 20.0},
+    ]
     # equalizer_clip = equalizers.create_equalizer_clip_bars_upper(audio_file, duration=audio_duration, 
     #                     size=final_video.size, colormap=cv2.COLORMAP_AUTUMN,
     #                     equalizer_width_percent=30, max_bar_height_percent=30)
@@ -56,8 +63,8 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
                           num_dots=30,
                           circle_vertical_position_percent=7,
                           amplitude_threshold=0.5,
-                          amplification=1.0,
-                          debug_mode=True)
+                          debug_mode=True,
+                          frequency_bands=frequency_bands)
 
     
     equalizer_clip = equalizer_clip.set_opacity(0.2)  # Опционально: установить прозрачность
@@ -75,7 +82,7 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
         if num_cores > 1:
             final_video = final_video.subclip(start, end)
         elif audio_duration > 35:
-            final_video = final_video.subclip(25, 35) # Start at 0 seconds and end at 10 seconds
+            final_video = final_video.subclip(25, 45) # Start at 0 seconds and end at 10 seconds
         fps = 6 # 6, 24, 60
         preset = 'ultrafast' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora

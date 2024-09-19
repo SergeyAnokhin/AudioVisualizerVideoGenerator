@@ -50,6 +50,6 @@ if __name__ == "__main__":
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
 
     base_folder = "../"  # Укажите путь к основной папке, содержащей папки Clip
-    num_workers = 1  # Количество параллельных процессов
+    num_workers = 4  # Количество параллельных процессов
 
     process_folders(base_folder, num_workers)

@@ -55,8 +55,8 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
                           colormap_positions=[0.0, 0.33, 0.66, 1.0],
                           num_dots=30,
                           circle_vertical_position_percent=7,
-                          amplitude_threshold=0.1,
-                          amplification=5.0)
+                          amplitude_threshold=0.2,
+                          amplification=10.0)
 
     
     equalizer_clip = equalizer_clip.set_opacity(0.2)  # Опционально: установить прозрачность
@@ -70,7 +70,7 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
     final_video = CompositeVideoClip([final_video, equalizer_clip])
 
     # fastest for tests:
-    mode = 'test'
+    mode = 'quality_test'
     
     if mode == 'test':
         print("Mode: 🧪Test")
@@ -82,7 +82,6 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
         fps = 6
         preset = 'ultrafast' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
-        bitrate='100k' # 500k, 1M
     elif mode == 'quality_test':
         print("Mode: 🧪👍 Quality Test")
         # final_video = final_video.resize(0.5)
@@ -90,16 +89,16 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
             final_video = final_video.subclip(start, end)
         else:
             final_video = final_video.subclip(25, 35) # Start at 0 seconds and end at 10 seconds
-        fps = 24
-        preset = 'medium' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
+        fps = 60
+        preset = 'faster' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
-        bitrate='100k' # 500k, 1M
     else:
-        final_video = final_video.subclip(start, end)
+        if num_cores > 1:
+            final_video = final_video.subclip(start, end)
         print("Mode: 👍Final")
-        fps = 24
+        fps = 24 # 24, 60
         preset = 'medium' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
-        codec= 'libx265' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
+        codec= 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
         bitrate=None
 
     # print("❗❗❗Cut the last 5 seconds WARNING !!! Remove after use ❗❗❗")

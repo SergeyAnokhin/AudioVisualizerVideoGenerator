@@ -3,7 +3,7 @@ class Profile:
         self.name = name
         self.fps = fps
         self.resize = resize
-        self.crop = crop if crop else Crop()  # Use Crop instance here
+        self.crop = crop
         self.preset = preset
         self.codec = codec
 

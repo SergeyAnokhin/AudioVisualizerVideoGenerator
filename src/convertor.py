@@ -21,7 +21,7 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     # tools.suggest_frequency_bands(audio_file)
     
     start, end = 0, audio_duration
-    if profile and not profile.crop.is_empty():
+    if profile and profile.crop != None and not profile.crop.is_empty():
         start = profile.crop.start
         end = min(profile.crop.end or audio_duration, audio_duration)
         print(f"CONVERTOR({part}) :: Profile ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")

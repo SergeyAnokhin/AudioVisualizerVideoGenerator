@@ -63,11 +63,13 @@ def process_folders(base_folder, num_workers=1):
         "final_fast": Profile(
             name="👍Final fast 🏃💨",
             fps=24,
+            crop=None,
             preset="faster"
         ),
         "final": Profile(
             name="👍Final",
             fps=60,
+            crop=None,
             preset="medium"
         )
     }

@@ -1,3 +1,4 @@
+from model import Profile
 import numpy as np
 import librosa
 from moviepy.editor import *
@@ -76,7 +77,7 @@ def suggest_frequency_bands(audio_file, num_bands=4, sr=None, n_fft=2048, hop_le
     return suggested_bands
 
 
-def merge_videos_with_audio(video_files, audio_file, output_file):
+def merge_videos_with_audio(video_files, audio_file, output_file, profile: Profile, threads=4):
     """
     Объединяет список видеофайлов и добавляет к ним аудио, затем сохраняет результат в выходной файл.
     
@@ -112,8 +113,14 @@ def merge_videos_with_audio(video_files, audio_file, output_file):
 
     # Сохраняем итоговый файл
     print(f"💾 Сохранение итогового файла: {output_file}")
-    final_clip.write_videofile(output_file, codec="libx264", preset="ultrafast", threads=4)
+    final_clip.write_videofile(output_file, codec=profile.codec, preset=profile.preset, threads=threads)
     print(f"🎉 Файл успешно сохранен: {output_file}")
+
+        # Удаление временных файлов
+    for file in video_files:
+        if os.path.exists(file):
+            os.remove(file)
+            print(f"Удалён временный файл: {file}")
 
 
 def merge_videos(output_file, video_files):

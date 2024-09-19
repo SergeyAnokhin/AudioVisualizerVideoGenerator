@@ -17,7 +17,7 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
         return
 
     # Список изображений в папке
-    images = [os.path.join(folder, img) for img in sorted(os.listdir(folder)) if img.endswith(('.png', '.jpg', '.jpeg'))]
+    images = [os.path.join(folder, img) for img in sorted(os.listdir(folder)) if img.endswith(('.png', '.jpg', '.jpeg', '.jfif'))]
 
     # Длительность аудио-файла
     audio = AudioFileClip(audio_file)
@@ -74,7 +74,7 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
     final_video = CompositeVideoClip([final_video, equalizer_clip])
 
     # fastest for tests:
-    mode = 'final_fast'
+    mode = 'test'
     
     if mode == 'test':
         print("Mode: 🧪Test")
@@ -96,7 +96,7 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
         fps = 60
         preset = 'faster' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora
-    if mode == 'final_fast':
+    elif mode == 'final_fast':
         print("Mode: 👍Final fast 🏃💨")
         if num_cores > 1:
             final_video = final_video.subclip(start, end)

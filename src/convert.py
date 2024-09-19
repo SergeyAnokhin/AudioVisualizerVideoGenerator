@@ -3,6 +3,31 @@ import os
 import convertor
 from multiprocessing import Pool
 
+# start :
+# > conda activate audio_env
+# > python.exe .\convert.py
+
+#   Id CommandLine
+#   -- -----------
+#    1 conda init
+#    2 cd D:\Src\AudioVisualizerVideoGenerator\src
+#    3 where python.exe
+#    4 which python.exe
+#    5 python .\convert.py
+#    6 D:\Prog\miniconda3\envs\audio_env\python.exe .\convert.py
+#    7 conda install moviepy
+#    8 D:\Prog\miniconda3\envs\audio_env\python.exe .\convert.py
+#    9 conda activate audio_env
+#   10 D:\Prog\miniconda3\envs\audio_env\python.exe .\convert.py
+#   11 conda install moviepy
+#   12 D:\Prog\miniconda3\envs\audio_env\python.exe .\convert.py
+#   13 python.exe .\convert.py
+#   14 python.exe .\convert.py
+#   15 conda install opencv-python
+#   16 python.exe .\convert.py
+#   17 pip install opencv-python
+#   18 python.exe .\convert.py
+
 def process_folders(base_folder, num_workers=1):
     # Поиск всех папок, начинающихся с "Clip"
     folders = [os.path.join(base_folder, folder) \

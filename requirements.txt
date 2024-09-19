@@ -1,0 +1,8 @@
+# pip install -r ..\requirements.txt
+numpy
+librosa
+opencv-python
+moviepy
+ffmpeg
+Pillow==9.5.0
+soxr

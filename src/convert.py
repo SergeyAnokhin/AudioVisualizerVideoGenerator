@@ -3,6 +3,7 @@ from moviepy.editor import *
 import os
 import convertor
 from multiprocessing import Pool
+import argparse
 
 import tools
 
@@ -115,7 +116,7 @@ def process_folder(folder, num_cores, profile, gif_file):
         # # Output file path
         tools.merge_videos_with_audio(outputfiles, audio_file, output_file)
     else:
-        convertor.create_video_from_folder(audio_file, profile, gif_file, num_cores, True, output_file)
+        convertor.create_video_from_folder(audio_file, profile, gif_file, None, num_cores, True, output_file)
 
 
 # def process_folder_obsolete(folder, num_cores, gif_file, profile):
@@ -147,7 +148,13 @@ if __name__ == "__main__":
     # Установить переменную окружения динамически на основе количества доступных ядер
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
 
+    parser = argparse.ArgumentParser(description="Create video clip from music file and add slideshow with music visualization")
+
+    # Определение аргументов
+    parser.add_argument('--workers', type=int, required=False, help='Workers used for parall running')
+    args = parser.parse_args()
+
     base_folder = "../"  # Укажите путь к основной папке, содержащей папки Clip
-    num_workers = 2  # Количество параллельных процессов
+    num_workers = args.workers or 2  # Количество параллельных процессов
 
     process_folders(base_folder, num_workers)

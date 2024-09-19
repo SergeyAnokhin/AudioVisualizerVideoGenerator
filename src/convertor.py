@@ -63,7 +63,7 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
                           num_dots=30,
                           circle_vertical_position_percent=7,
                           amplitude_threshold=0.5,
-                          debug_mode=True,
+                          debug_mode=False,
                           frequency_bands=frequency_bands)
 
     
@@ -74,7 +74,7 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
     final_video = CompositeVideoClip([final_video, equalizer_clip])
 
     # fastest for tests:
-    mode = 'test'
+    mode = 'quality_test'
     
     if mode == 'test':
         print("Mode: 🧪Test")
@@ -92,7 +92,7 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
         if num_cores > 1:
             final_video = final_video.subclip(start, end)
         elif audio_duration > 35:
-            final_video = final_video.subclip(25, 35) # Start at 0 seconds and end at 10 seconds
+            final_video = final_video.subclip(25, 45) # Start at 0 seconds and end at 10 seconds
         fps = 60
         preset = 'faster' # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow, placebo
         codec = 'libx264' # libx264, libx265, mpeg4, vp8, vp9, prores, mjpeg, rawvideo, libvpx, libvpx-vp9, libtheora

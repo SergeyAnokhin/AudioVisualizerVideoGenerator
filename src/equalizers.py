@@ -112,6 +112,9 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
     # Конвертируем BGR в RGB
     colormap_colors = [(int(c[2]), int(c[1]), int(c[0])) for c in colormap_colors]
 
+    # Для отладочной информации будем сохранять размеры точек
+    debug_info = []
+
     def make_frame(t):
         # Получаем индекс текущего кадра
         frame_idx = int(t * fps)
@@ -119,18 +122,20 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
             frame_idx = num_frames - 1
 
         # Проверяем порог амплитуды
-        if all(band[frame_idx] < amplitude_threshold for band in interpolated_bands_left + interpolated_bands_right):
+        if all(band[frame_idx] < amplitude_threshold for band in interpolated_bands_left):
             # Возвращаем пустой прозрачный кадр
             frame = np.zeros((size[1], size[0], 3), dtype=np.uint8)
-            mask = np.zeros((size[1], size[0]), dtype=np.uint8)
-            return frame, mask
+            # Маска не нужна, так как кадр пустой
+            return frame
 
-        # Создаем пустой кадр и маску
+        # Создаем пустой кадр
         frame = np.zeros((size[1], size[0], 3), dtype=np.uint8)
-        mask = np.zeros((size[1], size[0]), dtype=np.uint8)
 
         # Функция для рисования точек
-        def draw_dots(positions, band_amplitudes):
+        def draw_dots(positions, band_amplitudes, channel_name):
+            # Для отладочной информации
+            frame_debug_info = []
+
             for x, y, x_norm, y_norm in positions:
                 # Вычисляем базовый размер точки на основе позиции
                 distance = np.sqrt(x_norm**2 + y_norm**2)
@@ -138,7 +143,7 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
 
                 # Рисуем четыре мини-точки с разными цветами
                 for idx, color in enumerate(colormap_colors):
-                    amp = band_amplitudes[idx][frame_idx]  # Получаем амплитуду из соответствующего диапазона частот
+                    amp = band_amplitudes[idx][frame_idx]  # Амплитуда из соответствующего диапазона частот
                     # Увеличиваем диапазон изменения размера точек
                     current_dot_size = dot_size * (0.2 + 0.8 * amp)  # Регулируем размер по амплитуде
                     current_dot_size = max(1, int(current_dot_size))
@@ -148,58 +153,53 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
                     yi = int(y + offset)
                     if 0 <= xi < size[0] and 0 <= yi < size[1]:
                         cv2.circle(frame, (xi, yi), current_dot_size // 2, color, -1)
-                        cv2.circle(mask, (xi, yi), current_dot_size // 2, 255, -1)
 
-        # Рисуем точки для левого и правого динамиков
-        draw_dots(left_positions, interpolated_bands_left)
-        draw_dots(right_positions, interpolated_bands_right)
+                # Сохраняем информацию для отладки только для левого канала
+                if channel_name == 'Left' and debug_mode:
+                    frame_debug_info.append({
+                        'position': (x, y),
+                        'distance': distance,
+                        'dot_size': dot_size,
+                        'amplitudes': [band[frame_idx] for band in band_amplitudes],
+                        'current_dot_size': current_dot_size
+                    })
 
-        # If debug mode is on, display debug information
+            if channel_name == 'Left' and debug_mode:
+                debug_info.append(frame_debug_info)
+
+        # Рисуем точки для левого канала
+        draw_dots(left_positions, interpolated_bands_left, 'Left')
+        # Рисуем точки для правого канала (можно не рисовать, если интересует только левый)
+        draw_dots(right_positions, interpolated_bands_right, 'Right')
+
+        # Если включен режим отладки, выводим информацию на кадр и через print
         if debug_mode:
+            # Отображаем текстовой информации на кадре
             debug_texts = []
             for idx, band in enumerate(frequency_bands):
                 freq_range = f"{band[0]}-{band[1]} Hz"
-                amplitude = (interpolated_bands_left[idx][frame_idx] + interpolated_bands_right[idx][frame_idx]) / 2
-                amplitude = round(amplitude * 100, 2)
-                debug_texts.append(f"Band {idx+1} ({freq_range}): {amplitude}%")
-                print(f"Band {idx+1} ({freq_range}): {amplitude}%")
+                amplitude = interpolated_bands_left[idx][frame_idx]
+                amplitude_percent = round(amplitude * 100, 2)
+                debug_texts.append(f"Band {idx+1} ({freq_range}): {amplitude_percent}%")
 
-            # Position for displaying the text
+            # Позиция для вывода текста
             text_x = size[0] // 2 - 200
             text_y = int(vertical_pos)
             
-            # Draw a semi-transparent rectangle for better text visibility
-            rect_width = 400
-            rect_height = 30 * len(debug_texts)
-            overlay = frame.copy()
-            cv2.rectangle(overlay, (text_x - 10, text_y - 30), 
-                        (text_x + rect_width, text_y + rect_height), 
-                        (0, 0, 0), -1)
-            alpha = 0.5  # Transparency factor
-            cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0, frame)
-
-            # Display each line of debug text
+            # Отображаем текстовую информацию
             for i, text in enumerate(debug_texts):
                 cv2.putText(frame, text, (text_x, text_y + i * 30), cv2.FONT_HERSHEY_SIMPLEX,
-                            0.7, (255, 255, 255), 2, cv2.LINE_AA)  # Bright white text with black outline
+                            0.7, (255, 255, 255), 2, cv2.LINE_AA)
 
-        return frame, mask / 255.0  # Возвращаем кадр и маску
+            # Выводим отладочную информацию через print
+            print(f"Frame {frame_idx}/{num_frames}:")
+            for i, info in enumerate(debug_texts):
+                print(info)
 
-    # Создаем VideoClip для кадра и маски
-    def make_frame_rgb(t):
-        frame, _ = make_frame(t)
         return frame
 
-    def make_frame_mask(t):
-        _, mask = make_frame(t)
-        return mask
-
     # Создаем видео клип для кадра
-    equalizer_clip = VideoClip(make_frame_rgb, duration=duration).set_fps(fps)
-    # Создаем маску
-    mask_clip = VideoClip(make_frame_mask, ismask=True, duration=duration).set_fps(fps)
-    # Устанавливаем маску для клипа
-    equalizer_clip = equalizer_clip.set_mask(mask_clip)
+    equalizer_clip = VideoClip(make_frame, duration=duration).set_fps(fps)
 
     return equalizer_clip
 

@@ -56,7 +56,7 @@ def create_video_from_folder(folder, gif_file=None, part=None, num_cores=1):
                           num_dots=30,
                           circle_vertical_position_percent=7,
                           amplitude_threshold=0.5,
-                          amplification=5.0,
+                          amplification=1.0,
                           debug_mode=True)
 
     

@@ -7,9 +7,8 @@ import tools
 
 def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=None, num_cores=1, is_audio=True,
                              output_file=None):
-    print(f"Start creating from: 📂{folder} Part # -{part}-", )
-
     folder = tools.get_directory_from_path(audio_file)
+    print(f"CONVERTOR({part}) :: Start creating from: 📂{folder}", )
 
     # Список изображений в папке
     images = [os.path.join(folder, img) for img in sorted(os.listdir(folder)) if img.endswith(('.png', '.jpg', '.jpeg', '.jfif'))]
@@ -17,7 +16,7 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     # Длительность аудио-файла
     audio = AudioFileClip(audio_file)
     audio_duration = audio.duration
-    print(f"CONVERTOR :: 🎶Audio ⌛duration: {audio_duration} secs")
+    print(f"CONVERTOR({part}) :: 🎶Audio ⌛duration: {audio_duration} secs")
     
     # tools.suggest_frequency_bands(audio_file)
     
@@ -25,16 +24,16 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     if profile and not profile.crop.is_empty():
         start = profile.crop.start
         end = min(profile.crop.end or audio_duration, audio_duration)
-        print(f"CONVERTOR :: Profile ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")
-    elif part:
+        print(f"CONVERTOR({part}) :: Profile ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")
+    elif part != None:
         start, end = tools.get_segment_duration(audio_duration, part, num_cores)
-        print(f"CONVERTOR :: Part ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")
+        print(f"CONVERTOR({part}) :: Part ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")
 
     # Длительность каждого изображения (в секундах)
     image_duration = 20  # Измените на желаемую длительность
     
     # Создаем слайд-шоу с повторением и затемнением
-    print("⏩Create looping slideshow with fade transition")
+    print(f"CONVERTOR({part}) :: ⏩Create looping slideshow with fade transition")
     slideshow = tools.create_slideshow_with_fade(images, audio_duration=audio_duration, 
                                            image_duration=image_duration, fade_duration=0.1)
 
@@ -45,7 +44,7 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     final_video = final_video.set_audio(audio)
 
     # Создаем эквалайзерный клип
-    print("⏩Create equalizer visualization")
+    print(f"CONVERTOR({part}) :: ⏩Create equalizer visualization")
     # Настройка диапазонов частот для каждой из четырех суб-точек с усилением
     frequency_bands = [
         {'band': (20, 100), 'amplification': 2.0},
@@ -68,19 +67,19 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     equalizer_clip = equalizer_clip.set_opacity(0.2)  # Опционально: установить прозрачность
 
     # Накладываем эквалайзер поверх финального видео
-    print("➕Add equalizer visualization")
+    print(f"CONVERTOR({part}) :: ➕Add equalizer visualization")
     final_video = CompositeVideoClip([final_video, equalizer_clip])
 
     if profile.resize and profile.resize != 1:
-        print(f"CONVERTOR :: Video resized with factor {profile.resize}")
+        print(f"CONVERTOR({part}) :: Video resized with factor {profile.resize}")
         final_video = final_video.resize(profile.resize)
 
     if start > 0 or end < audio_duration:
-        print(f"CONVERTOR :: ❗❗❗ Video croped ✂️{start:3.0f}-{end:3.0f}✂️")
+        print(f"CONVERTOR({part}) :: ❗❗❗ Video croped ✂️{start:3.0f}-{end:3.0f}✂️")
         final_video = final_video.subclip(start, end)
 
     # Сохраняем финальное видео
-    final_video.write_videofile(output_file, fps=profile.fps, threads=os.cpu_count(), \
+    final_video.write_videofile(output_file, fps=profile.fps, threads=1, \
         codec=profile.codec, preset=profile.preset, audio=is_audio) # ,bitrate=bitrate
-    print(f"Video created: {output_file}")
+    print(f"CONVERTOR({part}) :: Video created: {output_file}")
 

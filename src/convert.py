@@ -71,7 +71,8 @@ def process_folders(base_folder, num_workers=1):
             preset="medium"
         )
     }
-    profile = profiles["test"]
+    profile = profiles["final_fast"]
+    print(f'CONVERT :: Used profile : {profile.name}')
 
     for folder in folders:
         process_folder(folder, num_cores, profile, gif_file)
@@ -85,7 +86,7 @@ def process_folder(folder, num_cores, profile, gif_file):
     print(f'CONVERT :: Use workers: 🖥️{num_cores}')
     parts = list(range(num_cores))  # Creating a list of parts from 0 to num_cores - 1
 
-    audio_file = tools.get_audio_file()
+    audio_file = tools.get_audio_file(folder)
     # Проверяем, существует ли аудио-файл
     if not os.path.isfile(audio_file):
         print(f"❌Audio file not found in {folder}")
@@ -111,8 +112,6 @@ def process_folder(folder, num_cores, profile, gif_file):
             
         # # Output file path
         tools.merge_videos_with_audio(outputfiles, audio_file, output_file)
-                
-        convertor.merge_videos(output_file, outputfiles)
     else:
         convertor.create_video_from_folder(audio_file, profile, gif_file, num_cores, True, output_file)
 
@@ -147,6 +146,6 @@ if __name__ == "__main__":
     os.environ["OMP_NUM_THREADS"] = str(os.cpu_count())
 
     base_folder = "../"  # Укажите путь к основной папке, содержащей папки Clip
-    num_workers = 1  # Количество параллельных процессов
+    num_workers = 2  # Количество параллельных процессов
 
     process_folders(base_folder, num_workers)

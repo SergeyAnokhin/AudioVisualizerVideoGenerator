@@ -140,7 +140,7 @@ def get_segment_duration(total_duration, segment_number, total_segments):
     
     # Определяем начало и конец сегмента
     start_time = segment_number * segment_length
-    end_time = start_time + segment_length
+    end_time = start_time + segment_length - 1
     
     # Если это последний сегмент, корректируем конечное время
     if segment_number == total_segments + 1:

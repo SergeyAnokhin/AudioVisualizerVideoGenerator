@@ -1,7 +1,10 @@
+from model import Profile
 from moviepy.editor import *
 import os
 import convertor
 from multiprocessing import Pool
+
+import tools
 
 # start :
 # > conda activate audio_env
@@ -34,9 +37,7 @@ def process_folders(base_folder, num_workers=1):
                for folder in sorted(os.listdir(base_folder)) \
                if folder.startswith("Clip") and len(folder) == 5]
 
-    print('Folders found: ', folders)
-
-    folder = folders[0]
+    print('CONVERT :: 📁Folders found: ', folders)
 
     # Path to the GIF file (if needed)
     gif_file = os.path.join(base_folder, "static", "animated2.gif")  # Ensure the path is correct
@@ -44,28 +45,99 @@ def process_folders(base_folder, num_workers=1):
     # Determine the number of CPU cores or use the specified number of workers
     num_cores = num_workers if num_workers else os.cpu_count()
     print(f"Using CPU cores: {num_cores}. Total CPUs: {os.cpu_count()}")
+    
+    profiles = {
+        "test": Profile(
+            name="🧪Test",
+            fps=6,
+            resize=0.5,
+            crop=Crop(start=5, end=35),
+            preset="ultrafast"
+        ),
+        "quality_test": Profile(
+            name="🧪👍 Quality Test",
+            fps=60,
+            crop=Crop(start=25, end=35),
+            preset="medium"
+        ),
+        "final_fast": Profile(
+            name="👍Final fast 🏃💨",
+            fps=24,
+            preset="faster"
+        ),
+        "final": Profile(
+            name="👍Final",
+            fps=60,
+            preset="medium"
+        )
+    }
+    profile = profiles["test"]
 
-    # convertor.create_video_from_folder(folder, gif_file, None)
+    for folder in folders:
+        process_folder(folder, num_cores, profile, gif_file)
+                
 
-    # Determine parts based on the number of cores
+def process_folder(folder, num_cores, profile, gif_file):
+
+    print(f'CONVERT :: -------- Folder: 📁{folder} -------------------------')
+    # process_folder_obsolete(folder, num_cores, gif_file, profile)
+
+    print(f'CONVERT :: Use workers: 🖥️{num_cores}')
     parts = list(range(num_cores))  # Creating a list of parts from 0 to num_cores - 1
 
+    audio_file = tools.get_audio_file()
+    # Проверяем, существует ли аудио-файл
+    if not os.path.isfile(audio_file):
+        print(f"❌Audio file not found in {folder}")
+        return
+
+    print(f'CONVERT :: 🎧Audio found: {audio_file}')
+    clip_name = tools.get_filename_without_extension(audio_file)
+    output_file = os.path.join(folder, f"{clip_name}.mp4")
+
     # Prepare arguments for create_video_from_folder
-    args = [(folder, gif_file, part, num_cores, 6) for part in parts]
+    args = []
+    outputfiles = []
+    for part in parts:
+        outputfile = os.path.join(folder, f"output_part_{part}.mp4")
+        outputfiles.append(outputfile)
+        args.append((audio_file, profile, gif_file, part, num_cores, False, outputfile))
+    # (folder, profile: Profile, gif_file=None, part=None, num_cores=1, is_audio=True, output_file=None):
 
     if num_cores > 1:
         # Process the folder in parallel
         with Pool(processes=num_cores) as pool:
             pool.starmap(convertor.create_video_from_folder, args)
-        # folder = 'path/to/your/videos'
-        video_files = sorted([os.path.join(base_folder, f) for f in os.listdir(base_folder) if f.endswith('.mp4') and f.startswith('Clip1')])
-
+            
         # # Output file path
-        output_file = os.path.join(folder, "Clip1_output_video.mp4")
+        tools.merge_videos_with_audio(outputfiles, audio_file, output_file)
                 
-        convertor.merge_videos(output_file, video_files)
+        convertor.merge_videos(output_file, outputfiles)
     else:
-        convertor.create_video_from_folder(folder, gif_file, 0, num_cores, fps=24)
+        convertor.create_video_from_folder(audio_file, profile, gif_file, num_cores, True, output_file)
+
+
+# def process_folder_obsolete(folder, num_cores, gif_file, profile):
+
+#     # Determine parts based on the number of cores
+#     parts = list(range(num_cores))  # Creating a list of parts from 0 to num_cores - 1
+
+#     # Prepare arguments for create_video_from_folder
+#     args = [(folder, gif_file, part, num_cores, profile) for part in parts]
+
+#     if num_cores > 1:
+#         # Process the folder in parallel
+#         with Pool(processes=num_cores) as pool:
+#             pool.starmap(convertor.create_video_from_folder, args)
+#         # folder = 'path/to/your/videos'
+#         video_files = sorted([os.path.join(base_folder, f) for f in os.listdir(base_folder) if f.endswith('.mp4') and f.startswith('Clip1')])
+
+#         # # Output file path
+#         output_file = os.path.join(folder, "Clip1_output_video.mp4")
+                
+#         convertor.merge_videos(output_file, video_files)
+#     else:
+#         convertor.create_video_from_folder(folder, gif_file, 0, num_cores, profile)
         
 
 # Основной запуск

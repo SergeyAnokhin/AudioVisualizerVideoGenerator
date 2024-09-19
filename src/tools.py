@@ -4,6 +4,31 @@ from moviepy.editor import *
 import os
 from PIL import Image
 
+
+def get_audio_file(folder):
+    # Путь к аудио-файлу
+    audio_file = [os.path.join(folder, music) \
+                    for music in os.listdir(folder) if music.endswith(('.mp3'))][0] # os.path.join(folder, "music.mp3")
+
+    # Проверяем, существует ли аудио-файл
+    if not os.path.isfile(audio_file):
+        print(f"❌Audio file not found in {folder}")
+        return
+    
+    return audio_file    
+
+def get_directory_from_path(file_path):
+    # Получаем только путь к директории
+    directory_path = os.path.dirname(file_path)
+    return directory_path
+
+def get_filename_without_extension(file_path):
+    # Получаем только имя файла с расширением
+    file_name_with_extension = os.path.basename(file_path)
+    # Убираем расширение
+    file_name_without_extension = os.path.splitext(file_name_with_extension)[0]
+    return file_name_without_extension
+
 def suggest_frequency_bands(audio_file, num_bands=4, sr=None, n_fft=2048, hop_length=None):
     # Загружаем аудио файл
     y, sr = librosa.load(audio_file, sr=sr, mono=True)
@@ -51,6 +76,44 @@ def suggest_frequency_bands(audio_file, num_bands=4, sr=None, n_fft=2048, hop_le
     return suggested_bands
 
 
+def merge_videos_with_audio(video_files, audio_file, output_file):
+    """
+    Объединяет список видеофайлов и добавляет к ним аудио, затем сохраняет результат в выходной файл.
+    
+    :param video_files: Список путей к видеофайлам (без аудио).
+    :param audio_file: Путь к аудиофайлу (MP3).
+    :param output_file: Путь к выходному видеофайлу.
+    """
+    print(f"🚀 Начинается процесс объединения {len(video_files)} видеофайлов.")
+    
+    # Загружаем видеофайлы
+    clips = []
+    for idx, file in enumerate(video_files):
+        print(f"📂 Загрузка видеофайла {idx + 1}/{len(video_files)}: {file}")
+        clip = VideoFileClip(file)
+        clips.append(clip)
+    
+    print("✅ Все видеофайлы успешно загружены.")
+
+    # Объединяем видеофайлы
+    print("🔗 Объединение видеофайлов...")
+    final_clip = concatenate_videoclips(clips, method="compose")
+    print("🎬 Видео успешно объединено.")
+
+    # Загружаем аудио файл
+    print(f"🎵 Загрузка аудиофайла: {audio_file}")
+    audio = AudioFileClip(audio_file)
+    print("✅ Аудиофайл успешно загружен.")
+
+    # Добавляем аудио к финальному видео
+    print("🎶 Добавление аудио к объединенному видео...")
+    final_clip = final_clip.set_audio(audio)
+    print("✅ Аудио успешно добавлено к видео.")
+
+    # Сохраняем итоговый файл
+    print(f"💾 Сохранение итогового файла: {output_file}")
+    final_clip.write_videofile(output_file, codec="libx264", preset="ultrafast", threads=4)
+    print(f"🎉 Файл успешно сохранен: {output_file}")
 
 
 def merge_videos(output_file, video_files):

@@ -383,13 +383,13 @@ def create_slideshow_with_fade_OLD(images, audio_duration, image_duration=2, fad
 
 from moviepy.editor import ImageClip, concatenate_videoclips
 
-def create_slideshow_with_fade(images, audio_duration, image_duration=2, fade_duration=0.1):
+def create_slideshow_with_fade(imageClips: list, audio_duration, image_duration=2, fade_duration=0.1):
     image_clips = []
     
     print(f"SLIDES🖼 :: Total images: {len(images)} :: 🔁Looping at ⌛duration: {audio_duration} secs")
     # Создаем клипы для каждого изображения с эффектами затемнения и появления
-    for img in images:
-        clip = ImageClip(img).set_duration(image_duration)
+    for img in imageClips:
+        clip = img.set_duration(image_duration)
         # Применяем эффекты плавного появления и исчезновения
         clip = clip.fadein(fade_duration).fadeout(fade_duration)
         image_clips.append(clip)
@@ -415,6 +415,94 @@ def create_slideshow_with_fade(images, audio_duration, image_duration=2, fade_du
     
     return final_slideshow
 
+from moviepy.editor import ImageClip
+
+def adjust_image_clips(image_clips, target_height, mode='crop'):
+    """
+    Adjusts a list of ImageClips to have the same size.
+
+    Parameters:
+    - image_clips (list of ImageClip): List of images to process.
+    - target_height (int): The target vertical size (height) in pixels.
+    - mode (str): Determines how to handle images with differing aspect ratios.
+        - 'crop': Crop the images to fit the standard width.
+        - 'pad': Pad the images with black bars to fit the standard width.
+
+    Returns:
+    - adjusted_clips (list of ImageClip): List of adjusted ImageClips with the same size.
+    """
+    adjusted_clips = []
+
+    if not image_clips:
+        return adjusted_clips  # Return empty list if input is empty
+
+    # Adjust the first image to determine the standard width
+    first_clip = image_clips[0]
+    print(f"IMAGE_ADJUST :: Original[0] : w{first_clip.size[0]} x h{first_clip.size[1]}")
+    first_clip_resized = first_clip.resize(height=target_height)
+    standard_width, standard_height = first_clip_resized.size
+    print(f"IMAGE_ADJUST :: ↔️↕️Resized[0] : w{standard_width} x h{standard_height}")
+
+    # # Process the first clip
+    # if mode == 'crop':
+    #     # Crop the first clip if necessary (though width should already match standard_width)
+    #     first_clip_final = first_clip_resized.crop(width=standard_width, height=target_height)
+    # elif mode == 'pad':
+    #     # Pad the first clip if necessary (should not be needed for first clip)
+    #     first_clip_final = first_clip_resized.on_color(size=(standard_width, target_height),
+    #                                                    color=(0, 0, 0),
+    #                                                    col_opacity=1)
+    # else:
+    #     raise ValueError("Invalid mode. Use 'crop' or 'pad'.")
+
+    adjusted_clips.append(first_clip_resized)
+
+    # Process the rest of the images
+    for clip in image_clips[1:]:
+        # Resize clip to target height while maintaining aspect ratio
+        print(f"IMAGE_ADJUST :: Original : w{clip.size[0]} x h{clip.size[1]}")
+        clip_resized = clip.resize(height=target_height)
+        clip_width, clip_height = clip_resized.size
+        print(f"IMAGE_ADJUST :: ↔️↕️Resized : w{clip_width} x h{clip_height}")
+
+        if clip_width > standard_width:
+            if mode == 'crop':
+                # Crop the clip horizontally to match the standard width
+                x_center = clip_width / 2
+                x1 = x_center - standard_width / 2
+                x2 = x_center + standard_width / 2
+                clip_final = clip_resized.crop(x1=x1, x2=x2)
+                print(f"IMAGE_ADJUST :: Crop to ⏬smaller : w{clip_final.size[0]} x h{clip_final.size[1]}")
+            elif mode == 'pad':
+                # Since clip is wider than standard width, we need to crop
+                x_center = clip_width / 2
+                x1 = x_center - standard_width / 2
+                x2 = x_center + standard_width / 2
+                clip_final = clip_resized.crop(x1=x1, x2=x2)
+                print(f"IMAGE_ADJUST :: Pad to ⏬smaller : w{clip_final.size[0]} x h{clip_final.size[1]}")
+        elif clip_width < standard_width:
+            if mode == 'crop':
+                # Since clip is narrower than standard width, we need to stretch or pad
+                # For crop mode, we can center the clip on a black background
+                clip_final = clip_resized.on_color(size=(standard_width, target_height),
+                                                   color=(0, 0, 0),
+                                                   col_opacity=1,
+                                                   pos=('center', 'center'))
+                print(f"IMAGE_ADJUST :: Crop to ⏫bigger : w{clip_final.size[0]} x h{clip_final.size[1]}")
+            elif mode == 'pad':
+                # Pad the clip horizontally to match the standard width
+                clip_final = clip_resized.on_color(size=(standard_width, target_height),
+                                                   color=(0, 0, 0),
+                                                   col_opacity=1,
+                                                   pos=('center', 'center'))
+                print(f"IMAGE_ADJUST :: Pad to ⏫bigger : w{clip_final.size[0]} x h{clip_final.size[1]}")
+        else:
+            # Width matches the standard width
+            clip_final = clip_resized
+
+        adjusted_clips.append(clip_final)
+
+    return adjusted_clips
 
 
 def inspect_clip(name, clip, debug=False):

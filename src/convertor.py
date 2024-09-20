@@ -35,7 +35,9 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     
     # Создаем слайд-шоу с повторением и затемнением
     print(f"CONVERTOR{part_str} :: ⏩Create looping slideshow with fade transition")
-    slideshow = tools.create_slideshow_with_fade(images, audio_duration=audio_duration, 
+    imageClips = [ImageClip(img) for img in images]
+    imageClips = tools.adjust_image_clips(imageClips, 1024, mode='crop')
+    slideshow = tools.create_slideshow_with_fade(imageClips, audio_duration=audio_duration, 
                                            image_duration=image_duration, fade_duration=0.1)
 
     # Проверяем наличие GIF-файла и накладываем его на видео
@@ -56,7 +58,7 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     # all color maps : https://learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
     equalizer_clip = equalizers.create_equalizer_clip(audio_file, duration=audio_duration,
                         size=final_video.size, 
-                        colormap=colormap, circle_radius=400,
+                        colormap=colormap, circle_radius=300,
                           center_dot_size=35, edge_dot_size=5,
                           colormap_positions=[0.0, 0.33, 0.66, 1.0],
                           num_dots=30,

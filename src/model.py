@@ -21,7 +21,7 @@ class Crop:
         self.end = end
         
     def is_empty(self):
-        return self.end != None or self.start > 0
+        return self.end == None and self.start == 0
 
     def __str__(self):
         return f"Crop(start={self.start}, end={self.end})"

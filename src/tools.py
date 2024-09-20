@@ -4,7 +4,192 @@ import librosa
 from moviepy.editor import *
 import os
 from PIL import Image
+from moviepy.editor import TextClip, VideoClip
+from moviepy.video.fx.all import fadein, fadeout
+from moviepy.editor import ImageClip
+from PIL import Image, ImageDraw, ImageFont
 
+def create_text_image(text, font_size, color, bg_color, size):
+# img = create_text_image("Your Text Here", 50, "white", "black", (800, 600))
+# img.save("text_image.png")
+# clip = ImageClip("text_image.png").set_duration(5)    
+    
+    img = Image.new('RGB', size, bg_color)
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.truetype('arial.ttf', font_size)
+    w, h = draw.textsize(text, font=font)
+    draw.text(((size[0]-w)/2, (size[1]-h)/2), text, fill=color, font=font)
+    return img
+
+from moviepy.editor import TextClip, VideoClip
+from moviepy.video.fx.all import fadein, fadeout
+
+def create_text_clip(text, duration, start_time=0, end_time=None,
+                     position=(50, 50), position_units='percent',
+                     font='Arial', font_size=50, font_color='white',
+                     stroke_color='black', stroke_width=2,
+                     fade_duration=0.5,
+                     video_size=(1280, 720)):
+    """
+    Создает видеоклип с текстом на прозрачном фоне.
+
+    Параметры:
+    - text (str): Текст для отображения.
+    - duration (float): Длительность клипа в секундах.
+    - start_time (float): Время начала отображения текста в секундах.
+    - end_time (float): Время окончания отображения текста в секундах. Если None, используется start_time + duration.
+    - position (tuple): Позиция текста (x, y). Значения в процентах или пикселях, в зависимости от position_units.
+    - position_units (str): Единицы измерения позиции ('percent' или 'pixels').
+    - font (str): Название шрифта.
+    - font_size (int): Размер шрифта.
+    - font_color (str или tuple): Цвет шрифта.
+    - stroke_color (str или tuple): Цвет обводки текста.
+    - stroke_width (int): Толщина обводки текста.
+    - fade_duration (float): Длительность эффектов появления и исчезновения в секундах.
+    - video_size (tuple): Размер видео (width, height) для расчета позиции в пикселях.
+
+    Возвращает:
+    - text_clip (VideoClip): Клип с текстом и прозрачным фоном.
+    """
+    if end_time is None:
+        end_time = start_time + duration
+
+    # Создаем текстовый клип
+    text_clip = TextClip(text,
+                         fontsize=font_size,
+                         font=font,
+                         color=font_color,
+                         stroke_color=stroke_color,
+                         stroke_width=stroke_width,
+                         method='caption',
+                         size=None)
+
+    # Устанавливаем длительность
+    text_clip = text_clip.set_duration(end_time - start_time)
+
+    # Применяем эффекты появления и исчезновения
+    if fade_duration > 0:
+        text_clip = text_clip.fx(fadein, fade_duration).fx(fadeout, fade_duration)
+
+    # Преобразуем позицию из процентов в пиксели, если необходимо
+    if position_units == 'percent':
+        x = int(position[0] * video_size[0] / 100)
+        y = int(position[1] * video_size[1] / 100)
+        pos = (x, y)
+    else:
+        pos = position
+
+    text_clip = text_clip.set_position(pos)
+
+    # Устанавливаем время начала отображения
+    text_clip = text_clip.set_start(start_time)
+
+    return text_clip
+
+
+def create_text_clip_pil(text, duration, start_time=0, end_time=None,
+                         position=(50, 50), position_units='percent',
+                         font='Arial', font_size=50, font_color='white',
+                         stroke_color='black', stroke_width=2,
+                         fade_duration=0.5,
+                         video_size=(1280, 720)):
+    """
+    Создает видеоклип с текстом на прозрачном фоне, используя PIL.
+
+    Параметры:
+    - те же, что и у функции create_text_clip.
+
+    Возвращает:
+    - text_clip (VideoClip): Клип с текстом и прозрачным фоном.
+    """
+    if end_time is None:
+        end_time = start_time + duration
+
+    # Размер видео
+    width, height = video_size
+
+    # Загружаем шрифт
+    try:
+        font_obj = ImageFont.truetype(font, font_size)
+    except IOError:
+        font_obj = ImageFont.load_default()
+
+    # Создаем функцию для генерации кадров
+    def make_frame(t):
+        # Создаем прозрачное изображение
+        img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+
+        # Измеряем размер текста
+        text_size = draw.textsize(text, font=font_obj, stroke_width=stroke_width)
+
+        # Преобразуем позицию из процентов в пиксели, если необходимо
+        if position_units == 'percent':
+            x = int(position[0] * width / 100)
+            y = int(position[1] * height / 100)
+        else:
+            x, y = position
+
+        # Центрируем текст относительно заданной позиции
+        text_x = x - text_size[0] // 2
+        text_y = y - text_size[1] // 2
+
+        # Рисуем текст с обводкой
+        draw.text((text_x, text_y), text, font=font_obj, fill=font_color,
+                  stroke_width=stroke_width, stroke_fill=stroke_color)
+
+        # Преобразуем изображение в массив numpy
+        frame = np.array(img)
+
+        return frame
+
+    # Создаем видео клип
+    text_clip = VideoClip(make_frame, duration=end_time - start_time)
+
+    # Применяем эффекты появления и исчезновения
+    if fade_duration > 0:
+        text_clip = text_clip.fx(fadein, fade_duration).fx(fadeout, fade_duration)
+
+    # Устанавливаем время начала отображения
+    text_clip = text_clip.set_start(start_time)
+
+    return text_clip
+
+# Папка со шрифтами в Windows
+FONTS_FOLDERS = ["C:\\Windows\\Fonts"]  # Можно добавить другие папки по необходимости
+
+# python -c "import tools; tools.find_fonts('Arial')" 
+def find_fonts(keyword=None):
+    found_fonts = []
+    
+    # Перебираем все папки со шрифтами
+    for folder in FONTS_FOLDERS:
+        # Перебираем все файлы в папке
+        for font_file in os.listdir(folder):
+            # Проверяем, является ли файл шрифтом
+            if font_file.endswith(('.ttf', '.otf')):
+                # Если передано ключевое слово, проверяем, содержится ли оно в названии файла
+                if keyword is None or keyword.lower() in font_file.lower():
+                    font_path = os.path.join(folder, font_file)
+                    # Сохраняем информацию о шрифте и доступности для библиотек
+                    font_info = {
+                        'font_file': font_file,
+                        'font_path': font_path,
+                        'usable_in_moviepy': True,  # Для MoviePy используем просто название
+                        'usable_in_pil': True       # Для PIL нужен полный путь
+                    }
+                    found_fonts.append(font_info)
+    
+    # Выводим результаты
+    if found_fonts:
+        for font in found_fonts:
+            print(f"Найден шрифт: {font['font_file']}")
+            print(f"Полный путь: {font['font_path']}")
+            print(f"Может использоваться с MoviePy: {'Да' if font['usable_in_moviepy'] else 'Нет'}")
+            print(f"Может использоваться с PIL: {'Да' if font['usable_in_pil'] else 'Нет'}")
+            print("-" * 40)
+    else:
+        print("Шрифты не найдены.")
 
 def get_audio_file(folder):
     # Путь к аудио-файлу

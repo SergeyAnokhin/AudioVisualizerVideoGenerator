@@ -1,3 +1,4 @@
+import cv2
 from model import Crop, Profile
 from moviepy.editor import *
 import os
@@ -45,14 +46,14 @@ def process_folders(base_folder, args: argparse.Namespace, num_workers=1):
 
     # Determine the number of CPU cores or use the specified number of workers
     num_cores = num_workers if num_workers else os.cpu_count()
-    print(f"Using CPU cores: {num_cores}. Total CPUs: {os.cpu_count()}")
+    print(f"CONVERT :: Using CPU cores: 🖥 {num_cores}. Total CPUs: 🖥 {os.cpu_count()}")
     
     profiles = {
         "test": Profile(
             name="🧪Test",
             fps=6,
             resize=0.5,
-            crop=Crop(start=5, end=35),
+            crop=Crop(start=5, end=10),
             preset="faster"
         ),
         "quality_test": Profile(
@@ -78,12 +79,15 @@ def process_folders(base_folder, args: argparse.Namespace, num_workers=1):
     profileId = args.profile or  "final_fast"
     profile = profiles[profileId]
     print(f'CONVERT :: Used profile : {profile.name}')
+    colormap_name = args.colormap or "COLORMAP_JET"
+    colormap = getattr(cv2, colormap_name, cv2.COLORMAP_JET)
+    print(f'CONVERT :: Used colormap : {args.colormap}')    
 
     for folder in folders:
-        process_folder(folder, num_cores, profile, gif_file)
+        process_folder(folder, num_cores, profile, gif_file, colormap)
                 
 
-def process_folder(folder, num_cores, profile, gif_file):
+def process_folder(folder, num_cores, profile, gif_file, colormap):
 
     print(f'CONVERT :: -------- Folder: 📁{folder} -------------------------')
     # process_folder_obsolete(folder, num_cores, gif_file, profile)
@@ -107,7 +111,7 @@ def process_folder(folder, num_cores, profile, gif_file):
     for part in parts:
         outputfile = os.path.join(folder, f"output_part_{part}.mp4")
         outputfiles.append(outputfile)
-        args.append((audio_file, profile, gif_file, part, num_cores, False, outputfile))
+        args.append((audio_file, profile, gif_file, part, num_cores, False, outputfile, colormap))
     # (folder, profile: Profile, gif_file=None, part=None, num_cores=1, is_audio=True, output_file=None):
 
     if num_cores > 1:
@@ -118,7 +122,7 @@ def process_folder(folder, num_cores, profile, gif_file):
         # # Output file path
         tools.merge_videos_with_audio(outputfiles, audio_file, output_file, profile)
     else:
-        convertor.create_video_from_folder(audio_file, profile, gif_file, None, num_cores, True, output_file)
+        convertor.create_video_from_folder(audio_file, profile, gif_file, None, num_cores, True, output_file, colormap)
 
 
 # def process_folder_obsolete(folder, num_cores, gif_file, profile):
@@ -155,6 +159,7 @@ if __name__ == "__main__":
     # Определение аргументов
     parser.add_argument('--workers', type=int, required=False, help='Workers used for parall running')
     parser.add_argument('--profile', type=str, required=False, help='Used performance profile: test, quality test, final_fast, final')
+    parser.add_argument('--colormap', type=str, required=False, help='Using colormap by OpenCV lib')
     args = parser.parse_args()
 
     base_folder = "../"  # Укажите путь к основной папке, содержащей папки Clip

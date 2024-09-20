@@ -3,24 +3,12 @@ import numpy as np
 import cv2
 import librosa
 
-    # cv2.COLORMAP_AUTUMN
-    # cv2.COLORMAP_BONE
-    # cv2.COLORMAP_COOL
-    # cv2.COLORMAP_HOT
-    # cv2.COLORMAP_HSV
-    # cv2.COLORMAP_JET
-    # cv2.COLORMAP_OCEAN
-    # cv2.COLORMAP_PINK
-    # cv2.COLORMAP_RAINBOW
-    # cv2.COLORMAP_SPRING
-    # cv2.COLORMAP_SUMMER
-    # cv2.COLORMAP_WINTER
-
 import numpy as np
 import cv2
 import librosa
 from moviepy.editor import VideoClip
 
+# all color maps : https://learnopencv.com/wp-content/uploads/2015/07/colormap_opencv_example.jpg
 def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
                           colormap=cv2.COLORMAP_JET, circle_radius=100,
                           center_dot_size=15, edge_dot_size=5,

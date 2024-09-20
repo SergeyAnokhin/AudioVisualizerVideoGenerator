@@ -162,6 +162,4 @@ cython_debug/
 #.idea/
 
 **/*.mp4
-/src/Clip1_output_video_*.mp3
-/Clip2/*
 /Clip*/*

@@ -32,7 +32,7 @@ import tools
 #   17 pip install opencv-python
 #   18 python.exe .\convert.py
 
-def process_folders(base_folder, num_workers=1):
+def process_folders(base_folder, args: argparse.Namespace, num_workers=1):
     # Поиск всех папок, начинающихся с "Clip"
     folders = [os.path.join(base_folder, folder) \
                for folder in sorted(os.listdir(base_folder)) \
@@ -74,7 +74,9 @@ def process_folders(base_folder, num_workers=1):
             preset="medium"
         )
     }
-    profile = profiles["final_fast"]
+
+    profileId = args.profile or  "final_fast"
+    profile = profiles[profileId]
     print(f'CONVERT :: Used profile : {profile.name}')
 
     for folder in folders:
@@ -114,7 +116,7 @@ def process_folder(folder, num_cores, profile, gif_file):
             pool.starmap(convertor.create_video_from_folder, args)
             
         # # Output file path
-        tools.merge_videos_with_audio(outputfiles, audio_file, output_file)
+        tools.merge_videos_with_audio(outputfiles, audio_file, output_file, profile)
     else:
         convertor.create_video_from_folder(audio_file, profile, gif_file, None, num_cores, True, output_file)
 
@@ -152,9 +154,10 @@ if __name__ == "__main__":
 
     # Определение аргументов
     parser.add_argument('--workers', type=int, required=False, help='Workers used for parall running')
+    parser.add_argument('--profile', type=str, required=False, help='Used performance profile: test, quality test, final_fast, final')
     args = parser.parse_args()
 
     base_folder = "../"  # Укажите путь к основной папке, содержащей папки Clip
     num_workers = args.workers or 2  # Количество параллельных процессов
 
-    process_folders(base_folder, num_workers)
+    process_folders(base_folder, args, num_workers)

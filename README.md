@@ -18,6 +18,17 @@ pip install -r requirements.txt
 
 To start using the scripts for audio and video processing, you can run the Python scripts directly in your terminal or include them in your project.
 
+### **convertor.py** Overview:
+
+This script is designed to create a slideshow from images synchronized with an audio file in `.mp3` format. The script searches for audio files in directories `Clip1`, `Clip2`, `Clip3`, and so on, using their names as the output video file name.
+
+#### How it works:
+
+1. An `.mp3` file is placed in the directory `Clip1`, `Clip2`, `Clip3`, etc. The name of this file will be used as the name of the output video file.
+2. The script searches for images in these directories, sorted by name. It supports the following main image formats: `.jpg`, `.jpeg`, `.png`, and `.gfif`.
+3. The images are compiled into a slideshow, which loops if the images run out.
+4. The audio track is analyzed to add visualizations synchronized with the images.
+
 ### Example:
 
 ```bash
@@ -25,6 +36,24 @@ python convertor.py
 ```
 
 Ensure your media files are in the proper directory for processing, or adjust the paths in the code accordingly.
+
+
+## **Arguments** 🧾
+
+The following arguments are available for the scripts:
+
+### **convertor.py** Arguments:
+
+- **--workers**: Specifies the number of CPU workers for parallel processing. Default is 2 if not provided.
+- **--profile**: Specifies the performance profile to use. Available profiles are `test`, `quality_test`, `final_fast`, and `final`.
+
+#### **Example**:
+
+```bash
+python convertor.py --workers 4 --profile final
+```
+
+This will use 4 CPU cores and the `final` profile for video processing, which is optimized for high quality.
 
 ## **Features** ✨
 
@@ -60,3 +89,5 @@ Feel free to add your name here if you contribute to this project!
 ## **License** 📜
 
 This project is licensed under the MIT License.
+
+

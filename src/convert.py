@@ -159,7 +159,7 @@ if __name__ == "__main__":
     # Определение аргументов
     parser.add_argument('--workers', type=int, required=False, help='Workers used for parall running')
     parser.add_argument('--profile', type=str, required=False, help='Used performance profile: test, quality test, final_fast, final')
-    parser.add_argument('--colormap', type=str, required=False, help='Using colormap by OpenCV lib')
+    parser.add_argument('--colormap', type=str, required=False, help='Using colormap by OpenCV lib') # https://learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
     args = parser.parse_args()
 
     base_folder = "../"  # Укажите путь к основной папке, содержащей папки Clip

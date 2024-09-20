@@ -157,7 +157,7 @@ def get_segment_duration(total_duration, segment_number, total_segments):
 
 def add_gif(gif_file, audio_duration, slideshow):
     if gif_file and os.path.isfile(gif_file):
-        print("✔Gif file found")
+        print("GIF: ✔Gif file found")
 
         has_mask = False # has_transparency(gif_file)
         # Загружаем GIF и зацикливаем на всю длительность аудио

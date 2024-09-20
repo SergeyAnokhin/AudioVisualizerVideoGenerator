@@ -63,9 +63,12 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
                           debug_mode=False, fps=profile.fps,
                           frequency_bands=frequency_bands)
 
-    
+    # Делаем фон прозрачным (удаляем определенный цвет)
+    equalizer_clip = equalizer_clip.fx(vfx.mask_color, color=[0, 0, 0], thr=100, s=5)   
     equalizer_clip = equalizer_clip.set_opacity(0.2)  # Опционально: установить прозрачность
 
+    tools.inspect_clip("final_video", final_video)
+    tools.inspect_clip("equalizer_clip", equalizer_clip)
     # Накладываем эквалайзер поверх финального видео
     print(f"CONVERTOR({part}) :: ➕Add equalizer visualization")
     final_video = CompositeVideoClip([final_video, equalizer_clip])

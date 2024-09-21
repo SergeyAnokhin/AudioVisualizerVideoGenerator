@@ -118,7 +118,7 @@ def process_folder(folder, num_cores, profile, gif_file, colormap, image_duratio
         # # Output file path
         tools.merge_videos_with_audio(outputfiles, audio_file, output_file, profile)
     else:
-        convertor.create_video_from_folder(audio_file, profile, gif_file, None, num_cores, True, output_file, colormap, image_duration)
+        convertor.create_video_from_folder(audio_file, profile, gif_file, None, num_cores, True, output_file, colormap, c)
 
 
 # def process_folder_obsolete(folder, num_cores, gif_file, profile):
@@ -156,7 +156,7 @@ if __name__ == "__main__":
     parser.add_argument('--workers', type=int, required=False, help='Workers used for parall running')
     parser.add_argument('--profile', type=str, required=False, help='Used performance profile: test, quality test, final_fast, final')
     parser.add_argument('--colormap', type=str, required=False, help='Using colormap by OpenCV lib') # https://learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
-    parser.add_argument('--image_duration', type=int, required=False, help='slideshow: image duration') # https://learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
+    parser.add_argument('--image_duration', type=int, required=False, help='slideshow: image duration') 
     args = parser.parse_args()
 
     base_folder = "../"  # Укажите путь к основной папке, содержащей папки Clip

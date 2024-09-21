@@ -25,7 +25,7 @@ import tools
 #   17 pip install opencv-python
 #   18 python.exe .\convert.py
 
-@prefix_color("ProcFOLDERS", "black")
+@prefix_color("ProcFOLDERS", "magenta")
 def process_folders(base_folder, args: argparse.Namespace, num_workers=1):
     # Поиск всех папок, начинающихся с "Clip"
     folders = [os.path.join(base_folder, folder) \

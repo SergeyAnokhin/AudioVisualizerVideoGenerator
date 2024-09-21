@@ -304,7 +304,7 @@ def suggest_frequency_bands(
     return suggested_bands
 
 
-@prefix_color("MERGE", "bright_black")
+@prefix_color("MERGE", "bright_magenta")
 def merge_videos_with_audio(
     video_files, audio_file, output_file, profile: Profile, threads=4
 ):

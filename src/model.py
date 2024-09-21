@@ -1,5 +1,5 @@
 class Profile:
-    def __init__(self, name, fps, resize=None, crop=None, preset="medium", codec='libx264'):
+    def __init__(self, name, fps, resize=1, crop=None, preset="medium", codec='libx264'):
         self.name = name
         self.fps = fps
         self.resize = resize

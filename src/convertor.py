@@ -1,15 +1,17 @@
 from moviepy.editor import *
 import os
 import cv2
+from console_tools import prefix_color, ice
 import equalizers
 from model import Profile
 import tools
 
+@prefix_color("CONVERTOR", "cyan")
 def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=None, num_cores=1, is_audio=True,
-                             output_file=None, colormap = cv2.COLORMAP_JET):
+                             output_file=None, colormap = cv2.COLORMAP_JET, image_duration=20):
     folder = tools.get_directory_from_path(audio_file)
     part_str = f"({part})" if part != None else ""
-    print(f"CONVERTOR{part_str} :: Start creating from: 📂{folder}", )
+    ice(f"{part_str} :: Start creating from: 📂{folder}", )
 
     # Список изображений в папке
     images = [os.path.join(folder, img) for img in sorted(os.listdir(folder)) if img.endswith(('.png', '.jpg', '.jpeg', '.jfif'))]
@@ -17,7 +19,7 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     # Длительность аудио-файла
     audio = AudioFileClip(audio_file)
     audio_duration = audio.duration
-    print(f"CONVERTOR{part_str} :: 🎶Audio ⌛duration: {audio_duration} secs")
+    ice(f"{part_str} :: 🎶Audio ⌛duration: {audio_duration} secs")
     
     # tools.suggest_frequency_bands(audio_file)
     
@@ -25,29 +27,32 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     if profile and profile.crop != None and not profile.crop.is_empty():
         start = profile.crop.start
         end = min(profile.crop.end or audio_duration, audio_duration)
-        print(f"CONVERTOR{part_str} :: Profile ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")
+        ice(f"{part_str} :: Profile ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")
     elif part != None:
         start, end = tools.get_segment_duration(audio_duration, part, num_cores)
-        print(f"CONVERTOR{part_str} :: Part ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")
+        ice(f"{part_str} :: Part ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")
 
-    # Длительность каждого изображения (в секундах)
-    image_duration = 20  # Измените на желаемую длительность
-    
     # Создаем слайд-шоу с повторением и затемнением
-    print(f"CONVERTOR{part_str} :: ⏩Create looping slideshow with fade transition")
+    ice(f"{part_str} :: ⏩Create looping slideshow with fade transition")
     imageClips = [ImageClip(img) for img in images]
-    imageClips = tools.adjust_image_clips(imageClips, 1024, mode='crop')
+        
+    target_height = 1024
+    if profile.resize and profile.resize != 1:
+        target_height *= profile.resize 
+        ice(f"{part_str} :: Video resized with factor {profile.resize}. Resulted height will be {target_height}")
+
+    imageClips = tools.adjust_image_clips(imageClips, target_height, mode='crop')
     slideshow = tools.create_slideshow_with_fade(imageClips, audio_duration=audio_duration, 
                                            image_duration=image_duration, fade_duration=0.1)
 
     # Проверяем наличие GIF-файла и накладываем его на видео
-    final_video = tools.add_gif(gif_file, audio_duration, slideshow)
+    final_video = tools.add_gif(gif_file, audio_duration, slideshow, profile.resize)
 
     # Добавляем аудио к видео
     final_video = final_video.set_audio(audio)
 
     # Создаем эквалайзерный клип
-    print(f"CONVERTOR{part_str} :: ⏩Create equalizer visualization")
+    ice(f"{part_str} :: ⏩Create equalizer visualization")
     # Настройка диапазонов частот для каждой из четырех суб-точек с усилением
     frequency_bands = [
         {'band': (20, 80), 'amplification': 2.0},
@@ -58,7 +63,7 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     # all color maps : https://learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
     equalizer_clip = equalizers.create_equalizer_clip(audio_file, duration=audio_duration,
                         size=final_video.size, 
-                        colormap=colormap, circle_radius=300,
+                        colormap=colormap, circle_radius=300 * profile.resize,
                           center_dot_size=35, edge_dot_size=5,
                           colormap_positions=[0.0, 0.33, 0.66, 1.0],
                           num_dots=30,
@@ -74,7 +79,7 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     tools.inspect_clip("final_video", final_video)
     tools.inspect_clip("equalizer_clip", equalizer_clip)
     # Накладываем эквалайзер поверх финального видео
-    print(f"CONVERTOR{part_str} :: ➕Add equalizer visualization")
+    ice(f"{part_str} :: ➕Add equalizer visualization")
     final_video = CompositeVideoClip([final_video, equalizer_clip])
 
     # # Создаем текстовый клип
@@ -95,15 +100,11 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     # # Создаем композицию
     # final_video = CompositeVideoClip([final_video, text_clip])
 
-    if profile.resize and profile.resize != 1:
-        print(f"CONVERTOR{part_str} :: Video resized with factor {profile.resize}")
-        final_video = final_video.resize(profile.resize)
-
     if start > 0 or end < audio_duration:
-        print(f"CONVERTOR{part_str} :: ❗❗❗ Video croped ✂️{start:3.0f}-{end:3.0f}✂️")
+        ice(f"{part_str} :: ❗❗❗ Video croped ✂️{start:3.0f}-{end:3.0f}✂️")
         final_video = final_video.subclip(start, end)
 
     # Сохраняем финальное видео
     final_video.write_videofile(output_file, fps=profile.fps, threads=1, \
         codec=profile.codec, preset=profile.preset, audio=is_audio) # ,bitrate=bitrate
-    print(f"CONVERTOR{part_str} :: Video created: {output_file}")
+    ice(f"{part_str} :: Video created: {output_file}")

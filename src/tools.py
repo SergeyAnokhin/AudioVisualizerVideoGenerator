@@ -477,7 +477,7 @@ def create_slideshow_with_fade(
 def resize_is_needed(clip, target_height):
     if target_height != clip.size[1]:
         clip_resized = clip.resize(height=target_height)
-        ice(f"↔️↕️Resized[0] : w{clip.size[0]} x h{clip.size[1]} => w{standard_width} x h{standard_height}")
+        ice(f"↔️↕️Resized : w{clip.size[0]} x h{clip.size[1]} => w{standard_width} x h{standard_height}")
     else:
         clip_resized = clip
     return clip_resized
@@ -527,7 +527,6 @@ def adjust_image_clips(image_clips, target_height, mode="crop"):
         # Resize clip to target height while maintaining aspect ratio
         clip_resized = resize_is_needed(clip, target_height)
         clip_width, clip_height = clip_resized.size
-        ice(f"↔️↕️Resized : w{clip.size[0]} x h{clip.size[1]} => w{clip_width} x h{clip_height}")
 
         if clip_width > standard_width:
             if mode == "crop":

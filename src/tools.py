@@ -474,6 +474,14 @@ def create_slideshow_with_fade(
 
     return final_slideshow
 
+def resize_is_needed(clip, target_height):
+    if target_height != clip.size[1]:
+        clip_resized = clip.resize(height=target_height)
+        ice(f"↔️↕️Resized[0] : w{clip.size[0]} x h{clip.size[1]} => w{standard_width} x h{standard_height}")
+    else:
+        clip_resized = clip
+    return clip_resized
+    
 
 @prefix_color("IMAGE_ADJUST", "blue")
 def adjust_image_clips(image_clips, target_height, mode="crop"):
@@ -497,9 +505,8 @@ def adjust_image_clips(image_clips, target_height, mode="crop"):
 
     # Adjust the first image to determine the standard width
     first_clip = image_clips[0]
-    first_clip_resized = first_clip.resize(height=target_height)
+    first_clip_resized = resize_is_needed(first_clip, target_height)
     standard_width, standard_height = first_clip_resized.size
-    ice(f"↔️↕️Resized[0] : w{first_clip.size[0]} x h{first_clip.size[1]} => w{standard_width} x h{standard_height}")
 
     # # Process the first clip
     # if mode == 'crop':
@@ -518,7 +525,7 @@ def adjust_image_clips(image_clips, target_height, mode="crop"):
     # Process the rest of the images
     for clip in image_clips[1:]:
         # Resize clip to target height while maintaining aspect ratio
-        clip_resized = clip.resize(height=target_height)
+        clip_resized = resize_is_needed(clip, target_height)
         clip_width, clip_height = clip_resized.size
         ice(f"↔️↕️Resized : w{clip.size[0]} x h{clip.size[1]} => w{clip_width} x h{clip_height}")
 

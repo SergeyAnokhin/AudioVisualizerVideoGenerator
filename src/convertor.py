@@ -3,12 +3,13 @@ import os
 import cv2
 from console_tools import prefix_color, ice
 import equalizers
-from model import Profile
+from model import Profile, TextConfig
 import tools
 
 @prefix_color("CONVERTOR", "cyan")
 def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=None, num_cores=1, is_audio=True,
-                             output_file=None, colormap = cv2.COLORMAP_JET, image_duration=20):
+                             output_file=None, colormap = cv2.COLORMAP_JET, image_duration=20, text: TextConfig = None):
+    text = text or TextConfig('', True)
     folder = tools.get_directory_from_path(audio_file)
     part_str = f"({part})" if part != None else ""
     ice(f"{part_str} :: Start creating from: 📂{folder}", )
@@ -82,23 +83,30 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     ice(f"{part_str} :: ➕Add equalizer visualization")
     final_video = CompositeVideoClip([final_video, equalizer_clip])
 
-    # # Создаем текстовый клип
-    # text_clip = tools.create_text_clip(
-    #     text="Ваш текст здесь",
-    #     duration=10,             # Текст будет отображаться 10 секунд
-    #     start_time=5,            # Начнет отображаться с 5-й секунды
-    #     position=(50, 80),       # Позиция текста в процентах (50% по ширине, 80% по высоте)
-    #     position_units='percent',
-    #     font='Roboto-Bold',
-    #     font_size=70,
-    #     font_color='yellow',
-    #     stroke_color='black',
-    #     stroke_width=3,
-    #     fade_duration=1          # Плавное появление и исчезновение в течение 1 секунды
-    # )
-
-    # # Создаем композицию
-    # final_video = CompositeVideoClip([final_video, text_clip])
+    # Создаем текстовый клип
+    # text = """КУДА УХОДЯТ\n\n\nДЕНЬГИ?"""
+    font_path = "C:/Users/desktop/AppData/Local/Microsoft/Windows/Fonts/Roboto-Bold.ttf"
+    text_clip = tools.create_text_clip(
+        text=text.text,
+        duration=30,             # Текст будет отображаться 10 секунд
+        start_time=2,            # Начнет отображаться с 5-й секунды
+        position=("center","center"), # (1, -5),       # Позиция текста в процентах (50% по ширине, 80% по высоте)
+        position_units=None, # 'percent',
+        font=font_path, # 'Arial',
+        font_size=60,
+        font_color='white', # 'white', 'gray'
+        stroke_color='black', # 'black', gray
+        stroke_width=3,
+        fade_duration=0.5,          # Плавное появление и исчезновение в течение 1 секунды
+        video_size=final_video.size
+    )
+    clip_path = tools.get_directory_from_path(output_file)
+    # Создаем композицию
+    final_video_with_text = CompositeVideoClip([final_video, text_clip])
+    tools.save_snapshots(final_video_with_text, [1, 5, 10, 30, 60], clip_path)
+    if not text.text_shot:
+        ice(f"Use text in video: {text.text}")
+        final_video = final_video_with_text
 
     if start > 0 or end < audio_duration:
         ice(f"{part_str} :: ❗❗❗ Video croped ✂️{start:3.0f}-{end:3.0f}✂️")

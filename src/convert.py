@@ -1,7 +1,7 @@
 import cv2
 from console_tools import prefix_color
 from console_tools import ice
-from model import Crop, Profile
+from model import Crop, Profile, TextConfig
 from moviepy.editor import *
 import os
 import convertor
@@ -46,13 +46,13 @@ def process_folders(base_folder, args: argparse.Namespace, num_workers=1):
             name="🧪Test",
             fps=6,
             resize=0.5,
-            crop=Crop(start=15, end=35),
+            crop=Crop(start=0, end=15),
             preset="faster"
         ),
         "quality_test": Profile(
             name="🧪👍 Quality Test",
             fps=60,
-            crop=Crop(start=25, end=35),
+            crop=Crop(start=25, end=30),
             preset="medium"
         ),
         "final_fast": Profile(
@@ -77,13 +77,15 @@ def process_folders(base_folder, args: argparse.Namespace, num_workers=1):
     ice(f'Used colormap : {args.colormap}')    
     image_duration = args.image_duration or 20
     ice(f'Slideshow image_duration : {image_duration}')
+    text = TextConfig(args)
+    ice(f'TextConfig : {text}')
 
     for folder in folders:
-        process_folder(folder, num_cores, profile, gif_file, colormap, image_duration)
+        process_folder(folder, num_cores, profile, gif_file, colormap, image_duration, text)
                 
 
 @prefix_color("ProcFOLDER", "yellow")
-def process_folder(folder, num_cores, profile, gif_file, colormap, image_duration):
+def process_folder(folder, num_cores, profile, gif_file, colormap, image_duration, text: TextConfig):
 
     ice(f'-------- Folder: 📁{folder} -------------------------')
     # process_folder_obsolete(folder, num_cores, gif_file, profile)
@@ -107,7 +109,7 @@ def process_folder(folder, num_cores, profile, gif_file, colormap, image_duratio
     for part in parts:
         outputfile = os.path.join(folder, f"output_part_{part}.mp4")
         outputfiles.append(outputfile)
-        args.append((audio_file, profile, gif_file, part, num_cores, False, outputfile, colormap, image_duration))
+        args.append((audio_file, profile, gif_file, part, num_cores, False, outputfile, colormap, image_duration, text))
     # (folder, profile: Profile, gif_file=None, part=None, num_cores=1, is_audio=True, output_file=None):
 
     if num_cores > 1:
@@ -118,7 +120,7 @@ def process_folder(folder, num_cores, profile, gif_file, colormap, image_duratio
         # # Output file path
         tools.merge_videos_with_audio(outputfiles, audio_file, output_file, profile)
     else:
-        convertor.create_video_from_folder(audio_file, profile, gif_file, None, num_cores, True, output_file, colormap, image_duration)
+        convertor.create_video_from_folder(audio_file, profile, gif_file, None, num_cores, True, output_file, colormap, image_duration, text)
 
 
 # def process_folder_obsolete(folder, num_cores, gif_file, profile):
@@ -152,10 +154,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Create video clip from music file and add slideshow with music visualization")
 
+    #  python .\convert.py --worker 1 --profile test --colormap COLORMAP_SPRING --image_duration 60 --text "КУДА УХОДЯТ|||ДЕНЬГИ?" --text_shot 1
     # Определение аргументов
     parser.add_argument('--workers', type=int, required=False, help='Workers used for parall running')
     parser.add_argument('--profile', type=str, required=False, help='Used performance profile: test, quality test, final_fast, final')
     parser.add_argument('--colormap', type=str, required=False, help='Using colormap by OpenCV lib') # https://learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
+    parser.add_argument('--text', type=str, required=False, help='Add text to clip') 
+    parser.add_argument('--text_shot', type=bool, required=False, help='Only save in screenshort, not in clip') # https://learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
     parser.add_argument('--image_duration', type=int, required=False, help='slideshow: image duration') 
     args = parser.parse_args()
 

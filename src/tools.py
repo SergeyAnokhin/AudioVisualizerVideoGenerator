@@ -8,7 +8,8 @@ from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import TextClip, VideoClip
 from moviepy.video.fx.all import fadein, fadeout
 from moviepy.editor import ImageClip, concatenate_videoclips
-
+from rich.console import Console
+from rich.table import Table
 
 def create_text_image(text, font_size, color, bg_color, size):
     # img = create_text_image("Your Text Here", 50, "white", "black", (800, 600))
@@ -22,7 +23,44 @@ def create_text_image(text, font_size, color, bg_color, size):
     draw.text(((size[0] - w) / 2, (size[1] - h) / 2), text, fill=color, font=font)
     return img
 
+# @prefix_color("SNAPSHOTS", "bright_blue")
+# def save_snapshots(clip: VideoClip, times: list, path: str):
+#     for t in times:
+#         if t <= clip.duration:
+#             frame = clip.get_frame(t)  # Returns a NumPy array (H x W x 3)
+#             # Process the frame as needed (e.g., apply filters)
+#             img = Image.fromarray(frame)
+#             file = os.path.join(path, f"frame{t:_>3.0f}_sec.png")
+#             img.save(file)
+#             print(f"Save snapshots for checking: 🖼{file}")
+#         else:
+#             print(f"Time {t} exceeds video duration of {clip.duration} seconds.")   
 
+@prefix_color("SNAPSHOTS", "bright_blue")
+def save_snapshots(clip: VideoClip, times: list, path: str):
+    # Create a console object for displaying output
+    console = Console()
+
+    # Create a table with two columns: "Time" and "Filename"
+    table = Table(title="Saved Snapshots", show_header=True, header_style="bold magenta")
+    table.add_column("Time (s)", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Filename", justify="left", style="green")
+
+    for t in times:
+        if t <= clip.duration:
+            frame = clip.get_frame(t)  # Returns a NumPy array (H x W x 3)
+            img = Image.fromarray(frame)
+            file = os.path.join(path, f"frame{t:_>3.0f}_sec.png")
+            img.save(file)
+            # Add the time and filename to the table
+            table.add_row(f"{t:.2f}", file)
+        else:
+            console.print(f"[red]Time {t} exceeds video duration of {clip.duration} seconds.[/red]")
+
+    # Print the table with saved snapshots
+    console.print(table)
+
+@prefix_color("TEXT", "bright_blue")
 def create_text_clip(
     text,
     duration,
@@ -71,7 +109,7 @@ def create_text_clip(
         stroke_color=stroke_color,
         stroke_width=stroke_width,
         method="caption",
-        size=None,
+        size=video_size,
     )
 
     # Устанавливаем длительность
@@ -89,11 +127,16 @@ def create_text_clip(
     else:
         pos = position
 
-    text_clip = text_clip.set_position(pos)
+    # Sets the position that the clip will have when included in compositions. 
+    # The argument pos can be either a couple (x,y) or a function t-> (x,y). 
+    # x and y mark the location of the top left corner of the clip, and can be of several types.
+    text_clip = text_clip.set_position(pos) 
 
     # Устанавливаем время начала отображения
     text_clip = text_clip.set_start(start_time)
 
+    ice(f"➕Add Text: |{text}|")
+    ice(f"Text postion: {pos}, Clip size: {text_clip.size}, Timing: {start_time}->{end_time} secs, Fade: {fade_duration}")
     return text_clip
 
 
@@ -186,6 +229,7 @@ FONTS_FOLDERS = ["C:\\Windows\\Fonts"]  # Можно добавить други
 
 
 # python -c "import tools; tools.find_fonts('Arial')"
+# python -c "from moviepy.editor import TextClip; print(TextClip.list('font'))"
 def find_fonts(keyword=None):
     found_fonts = []
 
@@ -304,7 +348,7 @@ def suggest_frequency_bands(
     return suggested_bands
 
 
-@prefix_color("MERGE", "bright_magenta")
+@prefix_color("MERGE", "bright_black")
 def merge_videos_with_audio(
     video_files, audio_file, output_file, profile: Profile, threads=4
 ):
@@ -387,7 +431,7 @@ def get_segment_duration(total_duration, segment_number, total_segments):
 
     return start_time, end_time
 
-@prefix_color("GIF_ADD", "black")
+@prefix_color("GIF_ADD", "bright_blue")
 def add_gif(gif_file, audio_duration, slideshow, resize=1):
     if gif_file and os.path.isfile(gif_file):
         ice("GIF: ✔Gif file found")

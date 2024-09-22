@@ -477,7 +477,8 @@ def create_slideshow_with_fade(
 def resize_is_needed(clip, target_height):
     if target_height != clip.size[1]:
         clip_resized = clip.resize(height=target_height)
-        ice(f"↔️↕️Resized : w{clip.size[0]} x h{clip.size[1]} => w{standard_width} x h{standard_height}")
+        resized_width, resized_height = clip_resized.size
+        ice(f"↔️↕️Resized : w{clip.size[0]} x h{clip.size[1]} => w{resized_width} x h{resized_height}")
     else:
         clip_resized = clip
     return clip_resized

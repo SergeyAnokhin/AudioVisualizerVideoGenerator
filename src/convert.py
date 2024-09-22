@@ -118,7 +118,7 @@ def process_folder(folder, num_cores, profile, gif_file, colormap, image_duratio
         # # Output file path
         tools.merge_videos_with_audio(outputfiles, audio_file, output_file, profile)
     else:
-        convertor.create_video_from_folder(audio_file, profile, gif_file, None, num_cores, True, output_file, colormap, c)
+        convertor.create_video_from_folder(audio_file, profile, gif_file, None, num_cores, True, output_file, colormap, image_duration)
 
 
 # def process_folder_obsolete(folder, num_cores, gif_file, profile):

@@ -46,7 +46,7 @@ def process_folders(base_folder, args: argparse.Namespace, num_workers=1):
             name="🧪Test",
             fps=6,
             resize=0.5,
-            crop=Crop(start=0, end=15),
+            # crop=Crop(start=0, end=15),
             preset="faster"
         ),
         "quality_test": Profile(

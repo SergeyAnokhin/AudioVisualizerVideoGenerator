@@ -50,7 +50,7 @@ def save_snapshots(clip: VideoClip, times: list, path: str):
         if t <= clip.duration:
             frame = clip.get_frame(t)  # Returns a NumPy array (H x W x 3)
             img = Image.fromarray(frame)
-            file = os.path.join(path, f"frame{t:_>3.0f}_sec.png")
+            file = os.path.join(path, f"frame_{t:_>3.0f}_sec.png")
             img.save(file)
             # Add the time and filename to the table
             table.add_row(f"{t:.2f}", file)
@@ -432,28 +432,40 @@ def get_segment_duration(total_duration, segment_number, total_segments):
     return start_time, end_time
 
 @prefix_color("GIF_ADD", "bright_blue")
-def add_gif(gif_file, audio_duration, slideshow, resize=1):
-    if gif_file and os.path.isfile(gif_file):
-        ice("GIF: ✔Gif file found")
+def add_gif(gif_file, audio_duration, slideshow, resize=1, start_time=-32, duration=None):
+    if not gif_file or not os.path.isfile(gif_file):
+        return final_video
+        
 
-        has_mask = False  # has_transparency(gif_file)
-        # Загружаем GIF и зацикливаем на всю длительность аудио
-        gif_clip = (
-            VideoFileClip(gif_file, has_mask)
-            .loop(duration=(14.0 * 2.0))  # two times # duration=audio_duration)
-            .resize(resize * 0.5)  # Масштабирование (0.5 = 50% от исходного размера)
-            .set_position(("left", "bottom"))
-        )  # Позиция (можно изменить на нужную)
+    has_mask = False  # has_transparency(gif_file)
+    
+    if duration is None:
+        if start_time < 0:
+            duration = -start_time
+        else:
+            duration = (8.0 * 2.0)
+    # If start_time is negative, calculate the actual start time relative to the end of the audio
+    if start_time < 0:
+        start_time = max(0, audio_duration + start_time)  # Prevent negative start times
+    
+    # Загружаем GIF и зацикливаем на всю длительность аудио
+    gif_clip = (
+        VideoFileClip(gif_file, has_mask)
+        .loop(duration=duration)  # two times, adjust duration as needed (14.0 * 2.0)
+        .resize(resize * 0.5)  # Масштабирование (0.5 = 50% от исходного размера)
+        .set_position(("left", "bottom"))
+        .set_start(start_time)  # Set when the GIF should appear
+    )
 
-        # Делаем фон GIF прозрачным (удаляем определенный цвет)
-        gif_clip = gif_clip.fx(vfx.mask_color, color=[0, 0, 0], thr=100, s=5)
+    ice(f"GIF: Duration: {start_time:3.0f} -> {start_time + duration:3.0f} secs")
 
-        inspect_clip("gif_clip", gif_clip)
+    # Делаем фон GIF прозрачным (удаляем определенный цвет)
+    gif_clip = gif_clip.fx(vfx.mask_color, color=[0, 0, 0], thr=100, s=5)
 
-        # Накладываем GIF поверх слайд-шоу
-        final_video = CompositeVideoClip([slideshow, gif_clip])
-    else:
-        final_video = slideshow
+    inspect_clip("gif_clip", gif_clip)
+
+    # Накладываем GIF поверх слайд-шоу
+    final_video = CompositeVideoClip([slideshow, gif_clip])
     return final_video
 
 

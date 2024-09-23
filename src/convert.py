@@ -35,7 +35,7 @@ def process_folders(base_folder, args: argparse.Namespace, num_workers=1):
     ice(f'📁Folders found: {folders}')
 
     # Path to the GIF file (if needed)
-    gif_file = os.path.join(base_folder, "static", "animated2.gif")  # Ensure the path is correct
+    gif_file = os.path.join(base_folder, "static", "animated3.gif")  # Ensure the path is correct
 
     # Determine the number of CPU cores or use the specified number of workers
     num_cores = num_workers if num_workers else os.cpu_count()
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     parser.add_argument('--profile', type=str, required=False, help='Used performance profile: test, quality test, final_fast, final')
     parser.add_argument('--colormap', type=str, required=False, help='Using colormap by OpenCV lib') # https://learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
     parser.add_argument('--text', type=str, required=False, help='Add text to clip') 
-    parser.add_argument('--text_shot', type=bool, required=False, help='Only save in screenshort, not in clip') # https://learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
+    parser.add_argument('--text_shot', type=bool, required=False, help='Only save in screenshort, not in clip') 
     parser.add_argument('--image_duration', type=int, required=False, help='slideshow: image duration') 
     args = parser.parse_args()
 

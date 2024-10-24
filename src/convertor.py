@@ -39,8 +39,8 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     ice(f"{part_str} :: ⏩Create looping slideshow with fade transition")
     imageClips = [ImageClip(img) for img in images]
         
-    target_height = 1024
-    if profile.resize and profile.resize != 1:
+    target_height = 1024 # None # 
+    if profile.resize and profile.resize != 1 and target_height != None:
         target_height *= profile.resize 
         ice(f"{part_str} :: Video resized with factor {profile.resize}. Resulted height will be {target_height}")
 
@@ -105,13 +105,13 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
         )
         # Создаем композицию
         final_video_with_text = CompositeVideoClip([final_video, text_clip])
-        if part == 1 or part == None:
-            tools.save_snapshots(final_video_with_text, [1, 5, 11, 32, 63], clip_path)
-        if not text.text_shot:
-            ice(f"Use text in video: {text.text}")
-            final_video = final_video_with_text
-    else:
-        tools.save_snapshots(final_video, [1, 5, 11, 32, 63], clip_path)
+        # if part == 1 or part == None:
+        #     tools.save_snapshots(final_video_with_text, [1, 5, 11, 32, 63], clip_path)
+        # if not text.text_shot:
+        #     ice(f"Use text in video: {text.text}")
+        final_video = final_video_with_text
+    # else:
+    #     tools.save_snapshots(final_video, [1, 5, 11, 32, 63], clip_path)
 
     if start > 0 or end < audio_duration:
         ice(f"{part_str} :: ❗❗❗ Video croped ✂️{start:3.0f}-{end:3.0f}✂️")

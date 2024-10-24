@@ -555,6 +555,9 @@ def adjust_image_clips(image_clips, target_height, mode="crop"):
     Returns:
     - adjusted_clips (list of ImageClip): List of adjusted ImageClips with the same size.
     """
+    if target_height == None:
+        return image_clips
+    
     adjusted_clips = []
 
     if not image_clips:

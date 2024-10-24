@@ -64,7 +64,7 @@ def process_folders(base_folder, args: argparse.Namespace, num_workers=1):
         "final": Profile(
             name="👍Final",
             fps=60,
-            crop=None,
+            # crop=Crop(start=0, end=170),
             preset="medium"
         )
     }

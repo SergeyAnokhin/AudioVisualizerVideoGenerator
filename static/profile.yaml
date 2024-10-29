@@ -1,0 +1,50 @@
+song: 
+  task_defaults: 
+    workers: 1
+    audio:
+      fade_duration: 0.0
+    video:
+      fps: 60
+      preset: "high"
+      codec: "libx265"
+    slideshow:
+      image_duration: 10
+      fade_duration: 0.5
+      target_height: 1024
+      resize: 1
+    equalizer:
+      colormap: COLORMAP_AUTUMN
+      use_suggest_frequency_bands: False
+      bands:
+        - start: 0
+          stop: 48
+          amplification': 2.0
+        - start: 48
+          stop: 96
+          amplification: 14
+        - start: 96
+          stop: 144
+          amplification: 3
+        - start: 577
+          stop: 625
+          amplification: 40
+    text:
+      - text: Add text to clip
+        position:
+          x: 100
+          y: 100
+        size: 16
+        font: Arial
+        color: '#000000'
+        only_shots: true
+  tasks:
+    main:
+    short:
+      audio:
+        fade_duration: 0.5
+        crop:
+          start: 0:00
+          end: 0:59
+      slideshow:
+        image_duration: 2
+        fade_duration: 0.1

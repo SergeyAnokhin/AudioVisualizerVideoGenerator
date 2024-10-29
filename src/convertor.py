@@ -5,6 +5,7 @@ from console_tools import prefix_color, ice
 import equalizers
 from model import Profile, TextConfig
 import tools
+from rich.table import Table
 
 @prefix_color("CONVERTOR", "cyan")
 def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=None, num_cores=1, is_audio=True,
@@ -12,12 +13,12 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     text = text or TextConfig('', True)
     folder = tools.get_directory_from_path(audio_file)
     clip_path = tools.get_directory_from_path(output_file)
+    is_first_part_or_single = part == None or part == 0
     part_str = f"({part})" if part != None else ""
     ice(f"{part_str} :: Start creating from: 📂{folder}", )
 
     # Список изображений в папке
-    images = [os.path.join(folder, img) for img in sorted(os.listdir(folder)) \
-            if img.endswith(('.png', '.jpg', '.jpeg', '.jfif')) and not img.startswith("frame_")]
+    images = tools.get_images_list(folder, image_duration, is_first_part_or_single)
 
     # Длительность аудио-файла
     audio = AudioFileClip(audio_file)
@@ -31,6 +32,8 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
         start = profile.crop.start
         end = min(profile.crop.end or audio_duration, audio_duration)
         ice(f"{part_str} :: Profile ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")
+        image_duration = (end - start) / len(images)
+        ice(f"{part_str} :: ⏱🖼 New Image duration : [{image_duration:3.0f}] secs")
     elif part != None:
         start, end = tools.get_segment_duration(audio_duration, part, num_cores)
         ice(f"{part_str} :: Part ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")
@@ -58,10 +61,10 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     ice(f"{part_str} :: ⏩Create equalizer visualization")
     # Настройка диапазонов частот для каждой из четырех суб-точек с усилением
     frequency_bands = [
-        {'band': (20, 80), 'amplification': 2.0},
-        {'band': (80, 255), 'amplification': 14.0}, # humain voice band
-        {'band': (255, 500), 'amplification': 3.0},
-        {'band': (500, 8000), 'amplification': 40.0},
+        {'band': (0, 48), 'amplification': 2.0},
+        {'band': (48, 96), 'amplification': 14.0}, # humain voice band
+        {'band': (96, 144), 'amplification': 3.0},
+        {'band': (577, 625), 'amplification': 40.0},
     ]
     # all color maps : https://learnopencv.com/applycolormap-for-pseudocoloring-in-opencv-c-python/
     equalizer_clip = equalizers.create_equalizer_clip(audio_file, duration=audio_duration,

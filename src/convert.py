@@ -66,7 +66,15 @@ def process_folders(base_folder, args: argparse.Namespace, num_workers=1):
             fps=60,
             # crop=Crop(start=0, end=170),
             preset="medium"
-        )
+        ),
+        "short": Profile(
+            name="🎞Short",
+            fps=60,
+            crop=Crop(start=0, end=58),
+            preset="medium",
+            img_fade_duration=0.1,
+            audio_fade_duration=0.5
+        )        
     }
 
     profileId = args.profile or  "final_fast"
@@ -79,6 +87,13 @@ def process_folders(base_folder, args: argparse.Namespace, num_workers=1):
     ice(f'Slideshow image_duration : {image_duration}')
     text = TextConfig(args)
     ice(f'TextConfig : {text}')
+    crop = args.crop
+    if crop:
+        duration = tools.durations_to_seconds(crop)
+        profile.audio.crop = Crop(start=duration[0], end=duration[1])
+        num_cores = 1
+    if profile.crop:
+        ice(f'✂Crop : {profile.crop}. ⚠ Use 1 worker ⚠')
 
     for folder in folders:
         process_folder(folder, num_cores, profile, gif_file, colormap, image_duration, text)
@@ -95,12 +110,16 @@ def process_folder(folder, num_cores, profile, gif_file, colormap, image_duratio
 
     audio_file = tools.get_audio_file(folder)
     # Проверяем, существует ли аудио-файл
-    if not os.path.isfile(audio_file):
+    if audio_file == None or not os.path.isfile(audio_file):
         print(f"❌Audio file not found in {folder}")
         return
 
+    tools.suggest_frequency_bands(audio_file)
+
     ice(f'🎧Audio found: {audio_file}')
     clip_name = tools.get_filename_without_extension(audio_file)
+    if profile.crop and not profile.crop.is_empty():
+        clip_name += "_crop"
     output_file = os.path.join(folder, f"{clip_name}.mp4")
 
     # Prepare arguments for create_video_from_folder
@@ -162,6 +181,7 @@ if __name__ == "__main__":
     parser.add_argument('--text', type=str, required=False, help='Add text to clip') 
     parser.add_argument('--text_shot', type=bool, required=False, help='Only save in screenshort, not in clip') 
     parser.add_argument('--image_duration', type=int, required=False, help='slideshow: image duration') 
+    parser.add_argument('--crop', type=str, required=False, help='crop audio in format "0:20,0:50"') # --crop 0:07,0:38
     args = parser.parse_args()
 
     base_folder = "../"  # Укажите путь к основной папке, содержащей папки Clip

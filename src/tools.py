@@ -269,13 +269,14 @@ def find_fonts(keyword=None):
 
 def get_audio_file(folder):
     # Путь к аудио-файлу
-    audio_file = [
-        os.path.join(folder, music)
+    audio_files = [os.path.join(folder, music)
         for music in os.listdir(folder)
-        if music.endswith((".mp3"))
-    ][
-        0
-    ]  # os.path.join(folder, "music.mp3")
+        if music.endswith((".mp3"))]
+
+    if len(audio_files) == 0:
+        return None
+
+    audio_file = audio_files[0]  # os.path.join(folder, "music.mp3")
 
     # Проверяем, существует ли аудио-файл
     if not os.path.isfile(audio_file):
@@ -341,9 +342,18 @@ def suggest_frequency_bands(
     # Формируем список диапазонов
     suggested_bands = [(round(band[1]), round(band[2])) for band in top_bands]
 
-    print("Предлагаемые частотные диапазоны:")
+    table = Table(title="Предлагаемые частотные диапазоны:")
+    table.add_column("N.", justify="right", style="cyan", no_wrap=True)
+    table.add_column("From", style="green", justify="right")
+    table.add_column("To (Ghz)", style="green", justify="right")
+
+
     for idx, band in enumerate(suggested_bands):
-        print(f"Диапазон {idx+1}: {band[0]} - {band[1]} Гц")
+        # print(f"Диапазон {idx+1}: {band[0]} - {band[1]} Гц")
+        table.add_row(str(idx+1), f'{band[0]}', str(band[1]))
+    
+    console = Console()
+    console.print(table)
 
     return suggested_bands
 
@@ -490,13 +500,54 @@ def create_slideshow_with_fade_OLD(
 
     return looped_slideshow
 
+def get_images_list(folder, image_duration, is_first_part_or_single):
+    # Create a Rich table
+    table = Table(title="Image List")
+    table.add_column("N.", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Filename", style="magenta")
+    table.add_column("Time", style="green")
+
+    # Get list of image files with full path and filenames without directory
+    images_with_path = [os.path.join(folder, img) for img in sorted(os.listdir(folder)) 
+                        if img.endswith(('.png', '.jpg', '.jpeg', '.jfif', 'webp')) 
+                        and not img.startswith("frame_")]
+   # Initialize starting time
+    current_time = 0    
+    # Add each image to the table with its index
+    for i, img_path in enumerate(images_with_path, start=1):
+        filename = os.path.basename(img_path)
+        minutes, seconds = divmod(current_time, 60)
+        time_formatted = f"{minutes:02}:{seconds:02}"
+        table.add_row(str(i), filename, time_formatted)
+        current_time += image_duration  # Increment time for the next image
+    
+    # Display the table
+    if is_first_part_or_single:
+        console = Console()
+        console.print(table)
+    
+    # Return the list of images with full path
+    return images_with_path
+
+def durations_to_seconds(duration_str):
+    # Split the duration string by commas to get each time entry
+    times = duration_str.split(',')
+    
+    # Convert each time entry to seconds
+    seconds_list = []
+    for time in times:
+        minutes, seconds = map(int, time.split(':'))
+        total_seconds = minutes * 60 + seconds
+        seconds_list.append(total_seconds)
+    
+    return seconds_list
 
 @prefix_color("SLIDES🖼", "bright_green")
 def create_slideshow_with_fade(
     imageClips: list, audio_duration, image_duration=2, fade_duration=0.1
 ):
     image_clips = []
-
+    
     ice(
         f"Total images: {len(imageClips)} :: 🔁Looping at ⌛duration: {audio_duration:3.0f} secs"
     )

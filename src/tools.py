@@ -1,5 +1,5 @@
+from typing import Any
 from console_tools import ice, prefix_color
-from model import Profile
 import numpy as np
 import librosa
 from moviepy.editor import *
@@ -10,6 +10,7 @@ from moviepy.video.fx.all import fadein, fadeout
 from moviepy.editor import ImageClip, concatenate_videoclips
 from rich.console import Console
 from rich.table import Table
+
 
 def create_text_image(text, font_size, color, bg_color, size):
     # img = create_text_image("Your Text Here", 50, "white", "black", (800, 600))
@@ -360,7 +361,7 @@ def suggest_frequency_bands(
 
 @prefix_color("MERGE", "bright_black")
 def merge_videos_with_audio(
-    video_files, audio_file, output_file, profile: Profile, threads=4
+    video_files, audio_file, output_file, video_profile: Any, threads=4
 ):
     """
     Объединяет список видеофайлов и добавляет к ним аудио, затем сохраняет результат в выходной файл.
@@ -398,7 +399,7 @@ def merge_videos_with_audio(
     # Сохраняем итоговый файл
     ice(f"💾 Сохранение итогового файла: {output_file}")
     final_clip.write_videofile(
-        output_file, codec=profile.codec, preset=profile.preset, threads=threads
+        output_file, codec=video_profile.codec, preset=video_profile.preset, threads=threads
     )
     ice(f"🎉 Файл успешно сохранен: {output_file}")
 
@@ -427,19 +428,19 @@ def merge_videos(output_file, video_files):
     final_clip.write_videofile(output_file, codec="libx264", threads=4)
 
 
-def get_segment_duration(total_duration, segment_number, total_segments):
-    # Вычисляем длительность одного сегмента
-    segment_length = total_duration // total_segments
+# def get_segment_duration(total_duration, segment_number, total_segments):
+#     # Вычисляем длительность одного сегмента
+#     segment_length = total_duration // total_segments
 
-    # Определяем начало и конец сегмента
-    start_time = segment_number * segment_length
-    end_time = start_time + segment_length
+#     # Определяем начало и конец сегмента
+#     start_time = segment_number * segment_length
+#     end_time = start_time + segment_length
 
-    # Если это последний сегмент, корректируем конечное время
-    if segment_number == total_segments + 1:
-        end_time = total_duration - 1
+#     # Если это последний сегмент, корректируем конечное время
+#     if segment_number == total_segments + 1:
+#         end_time = total_duration - 1
 
-    return start_time, end_time
+#     return start_time, end_time
 
 @prefix_color("GIF_ADD", "bright_blue")
 def add_gif(gif_file, audio_duration, slideshow, resize=1, start_time=-32, duration=None):
@@ -532,15 +533,16 @@ def get_images_list(folder, image_duration, is_first_part_or_single):
 def durations_to_seconds(duration_str):
     # Split the duration string by commas to get each time entry
     times = duration_str.split(',')
+    return [convert_to_seconds(time) for time in times]
+
+def convert_to_seconds(time_str):
+    # Split the input string into minutes and seconds
+    minutes, seconds = map(int, time_str.split(':'))
     
-    # Convert each time entry to seconds
-    seconds_list = []
-    for time in times:
-        minutes, seconds = map(int, time.split(':'))
-        total_seconds = minutes * 60 + seconds
-        seconds_list.append(total_seconds)
+    # Calculate the total seconds
+    total_seconds = minutes * 60 + seconds
     
-    return seconds_list
+    return total_seconds
 
 @prefix_color("SLIDES🖼", "bright_green")
 def create_slideshow_with_fade(

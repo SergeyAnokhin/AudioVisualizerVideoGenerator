@@ -1,13 +1,16 @@
-import cv2
-from console_tools import prefix_color
-from console_tools import ice
-from model import Crop, Profile, TextConfig
-from moviepy.editor import *
-import os
-import convertor
-from multiprocessing import Pool
 import argparse
+import os
+from multiprocessing import Pool
+
+from moviepy.editor import *
+from rich.pretty import pprint
+
+from converters.audio import AudioConverter
+import libs.Profile
+from libs.task_data import TaskData
 import tools
+from console_tools import ice, prefix_color
+from libs.Profile import Task
 
 # start :
 # > conda activate audio_env
@@ -25,6 +28,13 @@ import tools
 #   17 pip install opencv-python
 #   18 python.exe .\convert.py
 
+# Hierarchy:
+# Main
+#  \ Folder
+#   \ Task
+#    \ Convertor (List[Clip]) -> List[Clip]
+#     \ Worker
+
 @prefix_color("ProcFOLDERS", "magenta")
 def process_folders(base_folder, args: argparse.Namespace, num_workers=1):
     # Поиск всех папок, начинающихся с "Clip"
@@ -41,129 +51,118 @@ def process_folders(base_folder, args: argparse.Namespace, num_workers=1):
     num_cores = num_workers if num_workers else os.cpu_count()
     ice(f"Using CPU cores: 🖥 {num_cores}. Total CPUs: 🖥 {os.cpu_count()}")
     
-    profiles = {
-        "test": Profile(
-            name="🧪Test",
-            fps=6,
-            resize=0.5,
-            # crop=Crop(start=0, end=15),
-            preset="faster"
-        ),
-        "quality_test": Profile(
-            name="🧪👍 Quality Test",
-            fps=60,
-            crop=Crop(start=25, end=30),
-            preset="medium"
-        ),
-        "final_fast": Profile(
-            name="👍Final fast 🏃💨",
-            fps=24,
-            crop=None,
-            preset="faster"
-        ),
-        "final": Profile(
-            name="👍Final",
-            fps=60,
-            # crop=Crop(start=0, end=170),
-            preset="medium"
-        ),
-        "short": Profile(
-            name="🎞Short",
-            fps=60,
-            crop=Crop(start=0, end=58),
-            preset="medium",
-            img_fade_duration=0.1,
-            audio_fade_duration=0.5
-        )        
-    }
+    # profiles = {
+    #     "test": Profile(
+    #         name="🧪Test",
+    #         fps=6,
+    #         resize=0.5,
+    #         # crop=Crop(start=0, end=15),
+    #         preset="faster"
+    #     ),
+    #     "quality_test": Profile(
+    #         name="🧪👍 Quality Test",
+    #         fps=60,
+    #         crop=Crop(start=25, end=30),
+    #         preset="medium"
+    #     ),
+    #     "final_fast": Profile(
+    #         name="👍Final fast 🏃💨",
+    #         fps=24,
+    #         crop=None,
+    #         preset="faster"
+    #     ),
+    #     "final": Profile(
+    #         name="👍Final",
+    #         fps=60,
+    #         # crop=Crop(start=0, end=170),
+    #         preset="medium"
+    #     ),
+    #     "short": Profile(
+    #         name="🎞Short",
+    #         fps=60,
+    #         crop=Crop(start=0, end=58),
+    #         preset="medium",
+    #         img_fade_duration=0.1,
+    #         audio_fade_duration=0.5
+    #     )        
+    # }
 
-    profileId = args.profile or  "final_fast"
-    profile = profiles[profileId]
-    ice(f'Used profile : {profile.name}')
-    colormap_name = args.colormap or "COLORMAP_JET"
-    colormap = getattr(cv2, colormap_name, cv2.COLORMAP_JET)
-    ice(f'Used colormap : {args.colormap}')    
-    image_duration = args.image_duration or 20
-    ice(f'Slideshow image_duration : {image_duration}')
-    text = TextConfig(args)
-    ice(f'TextConfig : {text}')
-    crop = args.crop
-    if crop:
-        duration = tools.durations_to_seconds(crop)
-        profile.audio.crop = Crop(start=duration[0], end=duration[1])
-        num_cores = 1
-    if profile.crop:
-        ice(f'✂Crop : {profile.crop}. ⚠ Use 1 worker ⚠')
+    # profileId = args.profile or  "final_fast"
+    # profile = profiles[profileId]
+    # ice(f'Used profile : {profile.name}')
+    # colormap_name = args.colormap or "COLORMAP_JET"
+    # colormap = getattr(cv2, colormap_name, cv2.COLORMAP_JET)
+    # ice(f'Used colormap : {args.colormap}')    
+    # image_duration = args.image_duration or 20
+    # ice(f'Slideshow image_duration : {image_duration}')
+    # crop = args.crop
+    # if crop:
+    #     duration = tools.durations_to_seconds(crop)
+    #     profile.audio.crop = Crop(start=duration[0], end=duration[1])
+    #     num_cores = 1
+    # if profile.crop:
+    #     ice(f'✂Crop : {profile.crop}. ⚠ Use 1 worker ⚠')
 
     for folder in folders:
-        process_folder(folder, num_cores, profile, gif_file, colormap, image_duration, text)
+        process_folder(folder)
                 
 
-@prefix_color("ProcFOLDER", "yellow")
-def process_folder(folder, num_cores, profile, gif_file, colormap, image_duration, text: TextConfig):
+@prefix_color("ProcFOLDER", "white")
+def process_folder(folder):
 
     ice(f'-------- Folder: 📁{folder} -------------------------')
     # process_folder_obsolete(folder, num_cores, gif_file, profile)
 
-    ice(f'Use workers: 🖥️{num_cores}')
-    parts = list(range(num_cores))  # Creating a list of parts from 0 to num_cores - 1
-
-    audio_file = tools.get_audio_file(folder)
-    # Проверяем, существует ли аудио-файл
-    if audio_file == None or not os.path.isfile(audio_file):
-        print(f"❌Audio file not found in {folder}")
+    configFile = os.path.join(folder, "config.yaml")
+    if configFile == None or not os.path.isfile(configFile):
+        print(f"❌Config file not found in {folder}")
         return
+    
+    config = libs.Profile.load_config(configFile)
+    for task in config.tasks:
+        process_task(folder, task)
 
-    tools.suggest_frequency_bands(audio_file)
 
-    ice(f'🎧Audio found: {audio_file}')
-    clip_name = tools.get_filename_without_extension(audio_file)
-    if profile.crop and not profile.crop.is_empty():
-        clip_name += "_crop"
-    output_file = os.path.join(folder, f"{clip_name}.mp4")
+@prefix_color("ProcTask", "yellow")
+def process_task(folder, task: Task):
 
-    # Prepare arguments for create_video_from_folder
-    args = []
-    outputfiles = []
-    for part in parts:
-        outputfile = os.path.join(folder, f"output_part_{part}.mp4")
-        outputfiles.append(outputfile)
-        args.append((audio_file, profile, gif_file, part, num_cores, False, outputfile, colormap, image_duration, text))
-    # (folder, profile: Profile, gif_file=None, part=None, num_cores=1, is_audio=True, output_file=None):
+    ice(f'-----= Task: ⚙ {task.name} =------')
+    # pprint(task)
 
-    if num_cores > 1:
-        # Process the folder in parallel
-        with Pool(processes=num_cores) as pool:
-            pool.starmap(convertor.create_video_from_folder, args)
+    # parts = list(range(task.workers))  # Creating a list of parts from 0 to num_cores - 1
+    taskData = TaskData(workers=task.workers, name=task.name, 
+                    folder=folder, error=None)
+
+    clips = [None]
+    for convertor in task.converters:
+        clips = convertor.convert_list(taskData, clips)
+        if taskData.error:
+            ice(f"❌{taskData.error}")
+            return
+
+
+    # if profile.crop and not profile.crop.is_empty():
+    #    clip_name += "_crop"
+    # output_file = os.path.join(folder, f"{clip_name}.mp4")
+
+    # # Prepare arguments for create_video_from_folder
+    # args = []
+    # outputfiles = []
+    # for part in parts:
+    #     outputfile = os.path.join(folder, f"output_part_{part}.mp4")
+    #     outputfiles.append(outputfile)
+    #     args.append((audio_file, profile, gif_file, part, num_cores, False, outputfile, colormap, image_duration, text))
+    # # (folder, profile: Profile, gif_file=None, part=None, num_cores=1, is_audio=True, output_file=None):
+
+    # if num_cores > 1:
+    #     # Process the folder in parallel
+    #     with Pool(processes=num_cores) as pool:
+    #         pool.starmap(convertor.create_video_from_folder, args)
             
-        # # Output file path
-        tools.merge_videos_with_audio(outputfiles, audio_file, output_file, profile)
-    else:
-        convertor.create_video_from_folder(audio_file, profile, gif_file, None, num_cores, True, output_file, colormap, image_duration, text)
-
-
-# def process_folder_obsolete(folder, num_cores, gif_file, profile):
-
-#     # Determine parts based on the number of cores
-#     parts = list(range(num_cores))  # Creating a list of parts from 0 to num_cores - 1
-
-#     # Prepare arguments for create_video_from_folder
-#     args = [(folder, gif_file, part, num_cores, profile) for part in parts]
-
-#     if num_cores > 1:
-#         # Process the folder in parallel
-#         with Pool(processes=num_cores) as pool:
-#             pool.starmap(convertor.create_video_from_folder, args)
-#         # folder = 'path/to/your/videos'
-#         video_files = sorted([os.path.join(base_folder, f) for f in os.listdir(base_folder) if f.endswith('.mp4') and f.startswith('Clip1')])
-
-#         # # Output file path
-#         output_file = os.path.join(folder, "Clip1_output_video.mp4")
-                
-#         convertor.merge_videos(output_file, video_files)
-#     else:
-#         convertor.create_video_from_folder(folder, gif_file, 0, num_cores, profile)
-        
+    #     # # Output file path
+    #     tools.merge_videos_with_audio(outputfiles, audio_file, output_file, profile)
+    # else:
+    #     convertor.create_video_from_folder(audio_file, profile, gif_file, None, num_cores, True, output_file, colormap, image_duration, text)
 
 # Основной запуск
 if __name__ == "__main__":

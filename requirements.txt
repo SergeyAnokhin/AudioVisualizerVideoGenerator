@@ -8,3 +8,4 @@ Pillow==9.5.0
 soxr
 rich
 icecream
+pyyaml

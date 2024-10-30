@@ -2,14 +2,14 @@ from moviepy.editor import *
 import os
 import cv2
 from console_tools import prefix_color, ice
-import equalizers
-from model import Profile, TextConfig
+import converters.equalizers as equalizers
+from libs import Profile
 import tools
 from rich.table import Table
 
 @prefix_color("CONVERTOR", "cyan")
 def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=None, num_cores=1, is_audio=True,
-                             output_file=None, colormap = cv2.COLORMAP_JET, image_duration=20, text: TextConfig = None):
+                             output_file=None, colormap = cv2.COLORMAP_JET, image_duration=20):
     text = text or TextConfig('', True)
     folder = tools.get_directory_from_path(audio_file)
     clip_path = tools.get_directory_from_path(output_file)
@@ -20,10 +20,10 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
     # Список изображений в папке
     images = tools.get_images_list(folder, image_duration, is_first_part_or_single)
 
-    # Длительность аудио-файла
+    # # Длительность аудио-файла
     audio = AudioFileClip(audio_file)
-    audio_duration = audio.duration
-    ice(f"{part_str} :: 🎶Audio ⌛duration: {audio_duration} secs")
+    # audio_duration = audio.duration
+    # ice(f"{part_str} :: 🎶Audio ⌛duration: {audio_duration} secs")
     
     # tools.suggest_frequency_bands(audio_file)
     
@@ -34,22 +34,22 @@ def create_video_from_folder(audio_file, profile: Profile, gif_file=None, part=N
         ice(f"{part_str} :: Profile ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")
         image_duration = (end - start) / len(images)
         ice(f"{part_str} :: ⏱🖼 New Image duration : [{image_duration:3.0f}] secs")
-    elif part != None:
-        start, end = tools.get_segment_duration(audio_duration, part, num_cores)
-        ice(f"{part_str} :: Part ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")
+    # elif part != None:
+    #     start, end = tools.get_segment_duration(audio_duration, part, num_cores)
+    #     ice(f"{part_str} :: Part ✂️{part}: ⏱ [{start:3.0f}...{end:3.0f}] secs")
 
-    # Создаем слайд-шоу с повторением и затемнением
-    ice(f"{part_str} :: ⏩Create looping slideshow with fade transition")
-    imageClips = [ImageClip(img) for img in images]
+    # # Создаем слайд-шоу с повторением и затемнением
+    # ice(f"{part_str} :: ⏩Create looping slideshow with fade transition")
+    # imageClips = [ImageClip(img) for img in images]
         
-    target_height = 1024 # None # 
-    if profile.resize and profile.resize != 1 and target_height != None:
-        target_height *= profile.resize 
-        ice(f"{part_str} :: Video resized with factor {profile.resize}. Resulted height will be {target_height}")
+    # target_height = 1024 # None # 
+    # if profile.resize and profile.resize != 1 and target_height != None:
+    #     target_height *= profile.resize 
+    #     ice(f"{part_str} :: Video resized with factor {profile.resize}. Resulted height will be {target_height}")
 
-    imageClips = tools.adjust_image_clips(imageClips, target_height, mode='crop')
-    slideshow = tools.create_slideshow_with_fade(imageClips, audio_duration=audio_duration, 
-                                           image_duration=image_duration, fade_duration=0.1)
+    # imageClips = tools.adjust_image_clips(imageClips, target_height, mode='crop')
+    # slideshow = tools.create_slideshow_with_fade(imageClips, audio_duration=audio_duration, 
+    #                                        image_duration=image_duration, fade_duration=0.1)
 
     # Проверяем наличие GIF-файла и накладываем его на видео
     final_video = tools.add_gif(gif_file, audio_duration, slideshow, profile.resize)

@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+from typing import Any, Dict, List
 from moviepy.editor import *
 import numpy as np
 import cv2
@@ -7,7 +9,17 @@ import numpy as np
 import cv2
 import librosa
 from moviepy.editor import VideoClip
+from rich.pretty import pprint
+from converters.aconverter import AConverter
 
+@dataclass
+class EqualizerConverter(AConverter):
+
+    def convert(self, clips: List) -> List:
+        # Example of generic processing for equalizer conversion
+        print(f"-- Applying equalizer with config:")
+        # pprint(self.config)
+        
 # all color maps : https://learnopencv.com/wp-content/uploads/2015/07/colormap_opencv_example.jpg
 def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
                           colormap=cv2.COLORMAP_JET, circle_radius=100,

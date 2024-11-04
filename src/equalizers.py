@@ -2,11 +2,15 @@ from moviepy.editor import *
 import numpy as np
 import cv2
 import librosa
-
+from rich.console import Console
+from rich.table import Table
 import numpy as np
 import cv2
 import librosa
 from moviepy.editor import VideoClip
+
+import tools
+console = Console()
 
 # all color maps : https://learnopencv.com/wp-content/uploads/2015/07/colormap_opencv_example.jpg
 def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
@@ -25,6 +29,45 @@ def create_equalizer_clip(audio_file, duration, fps=24, size=(1280, 720),
             {'band': (500, 2000), 'amplification': 1.0},
             {'band': (2000, 8000), 'amplification': 1.0},
         ]
+
+    table = Table(title="🎨 Visualization Parameters")
+    table.add_column("📊 Parameter", justify="right")
+    table.add_column("Value", justify="left") 
+    table.add_column("📊 Parameter", justify="right")
+    table.add_column("Value", justify="left")
+    params = [
+        ("⏱️ Duration", f"{duration:.2f} s", "🎯 Circle Radius", f"{circle_radius:.0f} px"),
+        ("📐 Size", f"↔{size[0]} ↕{size[1]} px", "🎨 Colormap", tools.get_colormap_name(colormap)),
+        ("⚪ Center Dot", str(center_dot_size), "⭕ Edge Dot", str(edge_dot_size)),
+        ("🔢 Num Dots", str(num_dots), "📍 Circle Y Pos", f"{circle_vertical_position_percent}%"),
+        ("📊 Amplitude", str(amplitude_threshold), "🎞️ FPS", str(fps)),
+        ("🎨 Colors", str(colormap_positions), "", "")
+    ]
+    for row_params in params:
+        table.add_row(*row_params)
+    console.print(table)
+
+    console.print(f"[grey]🔊Used frequency bands: [/grey]")        
+    table = Table()
+    table.add_column("↔Range", justify="center")
+    table.add_column("⏫Amplification", justify="center") 
+    table.add_column("↔Range", justify="center")
+    table.add_column("⏫Amplification", justify="center")
+    table.add_row(
+        f"{frequency_bands[0]['band'][0]}-{frequency_bands[0]['band'][1]} Hz",
+        str(frequency_bands[0].get('amplification', 1.0)),
+        f"{frequency_bands[1]['band'][0]}-{frequency_bands[1]['band'][1]} Hz", 
+        str(frequency_bands[1].get('amplification', 1.0))
+    )
+    table.add_row(
+        f"{frequency_bands[2]['band'][0]}-{frequency_bands[2]['band'][1]} Hz",
+        str(frequency_bands[2].get('amplification', 1.0)),
+        f"{frequency_bands[3]['band'][0]}-{frequency_bands[3]['band'][1]} Hz",
+        str(frequency_bands[3].get('amplification', 1.0))
+    )
+    console.print(table)
+
+
     # Load audio file
     y, sr = librosa.load(audio_file, sr=None, mono=False)
 
